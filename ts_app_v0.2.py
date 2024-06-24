@@ -77,15 +77,15 @@ data_source = st.sidebar.radio("**:blue[Select the main source]**", ["File Uploa
 
 if data_source == "File Upload" :   
 
-    input = st.sidebar.file_uploader("**:blue[Choose a file]**",
+    file = st.sidebar.file_uploader("**:blue[Choose a file]**",
                                 type=["xlsx","csv"],
                                 accept_multiple_files=True,
                                 key=0)
-    if input is not None:
+    if file is not None:
+        df = pd.DataFrame()
         with st.spinner('Loading data..'):
-            df = pd.DataFrame()
-            df = pd.read_csv(input)
-            #df = load_csv()
+            for file in file:
+                df = pd.read_csv(file)
     st.sidebar.divider()
 
 #---------------------------------------------------------------------------------------------------------------------------------
