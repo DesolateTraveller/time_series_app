@@ -274,16 +274,21 @@ if data_source == "File Upload" :
                             forecast = m.predict(future)
                             st.success('Prediction generated successfully')
                             st.dataframe(forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']], use_container_width=True)
-                            fig1 = m.plot(forecast)
-                            st.write('Forecast plot')
-                            st.write(fig1)                   
-                            output = 1
 
-                        if growth == 'linear':
-                            fig2 = m.plot(forecast)
-                            a = add_changepoints_to_plot(fig2.gca(), m, forecast)
-                            st.write(fig2)
-                            output = 1
+                            col1, col2 = st.columns(6)
+
+                            with col1: 
+                                fig1 = m.plot(forecast)
+                                st.write('Forecast plot')
+                                st.write(fig1)                   
+                                output = 1
+
+                            with col2: 
+                                if growth == 'linear':
+                                    fig2 = m.plot(forecast)
+                                    a = add_changepoints_to_plot(fig2.gca(), m, forecast)
+                                    st.write(fig2)
+                                    output = 1
                     except:
                         st.warning("You need to train the model first.. ")
 
