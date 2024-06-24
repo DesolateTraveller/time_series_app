@@ -267,7 +267,8 @@ if data_source == "File Upload" :
 
                     else:
                         st.warning('Invalid configuration')
-           
+                    st.divider()
+                
                 if st.checkbox("Generate forecast (Predict)",key="predict"):
                     try:
                         with st.spinner("Forecasting.."):
@@ -287,11 +288,13 @@ if data_source == "File Upload" :
                                 if growth == 'linear':
                                     fig2 = m.plot(forecast)
                                     a = add_changepoints_to_plot(fig2.gca(), m, forecast)
+                                    st.write('Growth plot')
                                     st.write(fig2)
                                     output = 1
                     except:
                         st.warning("You need to train the model first.. ")
-
+                    st.divider()
+                    
                 if st.checkbox('Show components'):
                     try:
                         with st.spinner("Loading.."):
