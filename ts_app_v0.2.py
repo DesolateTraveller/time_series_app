@@ -202,31 +202,68 @@ if data_source == "File Upload" :
     #-----------------------------------------------
 
     if not df.empty:
-        columns = list(df.columns)
-        
-        col1,col2 = st.columns(2)
-        
-        with col1:
-            date_col = st.selectbox("Select date column",index= 0,options=columns,key="date", help='Column to be parsed as a date')
-        with col2:
-            metric_col = st.selectbox("Select Target column",index=1,options=columns,key="values", help='Quantity to be forecasted')
 
-        df = prep_data(df, date_col, metric_col)
-        output = 0
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(["**Information**","**Forecast**","**Validation**","**Tuning**","**Result**",])
 
-        Options = st.radio('Options', ['Plot Time-Seies data', 'Show Dataframe', 'Show Descriptive Statistics'], horizontal=True, label_visibility='collapsed', key = 'options')
+        with tab1:
+
+            st.subheader("Input Information", divider='blue')
         
-        if Options == 'Plot Time-Seies data':
-            try:
-                line_chart = alt.Chart(df).mark_line().encode(
+            columns = list(df.columns)
+            col1,col2 = st.columns(2)
+        
+            with col1:
+                date_col = st.selectbox("Select date column",index= 0,options=columns,key="date", help='Column to be parsed as a date')
+            with col2:
+                metric_col = st.selectbox("Select Target column",index=1,options=columns,key="values", help='Quantity to be forecasted')
+
+            df = prep_data(df, date_col, metric_col)
+            output = 0
+
+            Options = st.radio('Options', ['Plot Time-Seies data', 'Show Dataframe', 'Show Descriptive Statistics'], horizontal=True, label_visibility='collapsed', key = 'options')
+        
+            if Options == 'Plot Time-Seies data':
+                try:
+                    line_chart = alt.Chart(df).mark_line().encode(
                     x = 'ds:T',
                     y = "y:Q",tooltip=['ds:T', 'y']).properties(title="Time series preview").interactive()
-                st.altair_chart(line_chart,use_container_width=True)
+                    st.altair_chart(line_chart,use_container_width=True)
                 
-            except:
-                st.line_chart(df['y'],use_container_width =True,height = 300)
+                except:
+                    st.line_chart(df['y'],use_container_width =True,height = 300)
 
-        if Options =='Show Dataframe':
-            st.dataframe(df, use_container_width=True)
-        if Options == 'Show Descriptive Statistics':
-            st.write(df.describe().T, use_container_width=True)
+            if Options =='Show Dataframe':
+                st.dataframe(df.head(), use_container_width=True)
+
+            if Options == 'Show Descriptive Statistics':
+                st.write(df.describe().T, use_container_width=True)
+
+        with tab2:
+
+            st.write("Fit the model on the data and generate future prediction.")
+
+            if input:            
+                if st.checkbox("Initialize model (Fit)",key="fit"):
+                    if len(growth_settings)==2:
+                        m = Prophet(seasonality_mode=seasonality,
+                                    daily_seasonality=daily,
+                                    weekly_seasonality=weekly,
+                                    yearly_seasonality=yearly,
+                                    growth=growth)
+                            
+                        if holidays:
+                            m.add_country_holidays(country_name=country_code)
+                        
+                        if monthly:
+                            m.add_seasonality(name='monthly', period=30.5, fourier_order=5)
+
+                        with st.spinner('Fitting the model..'):
+                            m = m.fit(df)
+                            future = m.make_future_dataframe(periods=periods_input,freq='D')
+                            future['cap']=cap
+                            future['floor']=floor
+                            st.write("The model will produce forecast up to ", future['ds'].max())
+                            st.success('Model fitted successfully')
+
+                    else:
+                        st.warning('Invalid configuration')
