@@ -33,13 +33,13 @@ from datetime import datetime
 #---------------------------------------------------------------------------------------------------------------------------------
 #import custom_style()
 #image = Image.open('Image_Clariant.png')
-st.set_page_config(page_title="Time Series App | v0.1",
+st.set_page_config(page_title="Time Series Forecasting | App",
                    page_icon='https://www.clariant.com/images/clariant-logo-small.svg',
                    layout="wide",
                    initial_sidebar_state="auto",)
 #st.sidebar.image(image, use_column_width='auto') 
 #----------------------------------------
-st.title(f""":rainbow[Time Series App | v0.1]""")
+st.title(f""":rainbow[Time Series Forecasting App | v0.1]""")
 st.markdown('Developed by : **:blue[E&PT - Digital Solutions]** | prepared by : <a href="mailto:avijit.chakraborty@clariant.com">Avijit Chakraborty</a>', 
             unsafe_allow_html=True)
 st.info('**Disclaimer : :blue[Thank you for visiting the app] | This app is created for internal use, unauthorized uses or copying is strictly prohibited | Click the :blue[sidebar] to follow the instructions to start the applications.**', icon="ℹ️")
