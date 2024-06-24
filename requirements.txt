@@ -3,10 +3,10 @@ streamlit
 numpy
 pandas
 matplotlib
-#seaborn
-#uuid
+seaborn
+uuid
 #toml
-base64
+#base64
 requests
 pathlib
 collections
