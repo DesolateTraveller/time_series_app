@@ -10,54 +10,6 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 #---------------------------------------
-from typing import Any, Dict, List, Tuple
-
-from typing import Any, Dict, List
-
-import streamlit as st
-from ts_app_prep import clean_df
-from ts_app_prep import (
-    add_cap_and_floor_cols,
-    check_dataset_size,
-    filter_and_aggregate_df,
-    format_date_and_target,
-    format_datetime,
-    print_empty_cols,
-    print_removed_cols,
-    remove_empty_cols,
-    resample_df,
-)
-from ts_app_prep import get_train_set, get_train_val_sets
-from ts_app_prep import display_links, display_save_experiment_button
-from ts_app_prep import (
-    plot_components,
-    plot_future,
-    plot_overview,
-    plot_performance,
-)
-from ts_app_prep import input_cleaning, input_dimensions, input_resampling
-from ts_app_prep import (
-    input_columns,
-    input_dataset,
-    input_future_regressors,
-)
-from ts_app_prep import (
-    input_cv,
-    input_forecast_dates,
-    input_train_dates,
-    input_val_dates,
-)
-from ts_app_prep import input_metrics, input_scope_eval
-from ts_app_prep import (
-    input_holidays_params,
-    input_other_params,
-    input_prior_scale_params,
-    input_regressors,
-    input_seasonality_params,
-)
-from ts_app_prep import forecast_workflow
-from ts_app_prep import load_config, load_image
-
 import io
 import os
 import re
@@ -70,11 +22,6 @@ from PIL import Image
 from pathlib import Path
 from base64 import b64encode
 from zipfile import ZipFile
-#---------------------------------------
-import numpy as np
-import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
 #---------------------------------------
 import datetime
 from collections import defaultdict
@@ -91,6 +38,48 @@ from prophet.plot import plot_plotly
 from prophet.diagnostics import cross_validation
 #---------------------------------------
 from vacances_scolaires_france import SchoolHolidayDates
+#---------------------------------------
+#from ts_app_prep import clean_df
+from ts_app_prep import (
+    clean_df,
+    add_cap_and_floor_cols,
+    check_dataset_size,
+    filter_and_aggregate_df,
+    format_date_and_target,
+    format_datetime,
+    print_empty_cols,
+    print_removed_cols,
+    remove_empty_cols,
+    resample_df,
+    get_train_set, 
+    get_train_val_sets,
+    display_links, 
+    display_save_experiment_button,
+    plot_components,
+    plot_future,
+    plot_overview,
+    plot_performance,
+    input_cleaning, 
+    input_dimensions, 
+    input_resampling,
+    input_columns,
+    input_dataset,
+    input_future_regressors,
+    input_cv,
+    input_forecast_dates,
+    input_train_dates,
+    input_val_dates,
+    input_metrics, 
+    input_scope_eval,
+    input_holidays_params,
+    input_other_params,
+    input_prior_scale_params,
+    input_regressors,
+    input_seasonality_params,
+    forecast_workflow,
+    load_config, 
+    load_image)
+
 #---------------------------------------------------------------------------------------------------------------------------------
 ### Title and description for your Streamlit app
 #---------------------------------------------------------------------------------------------------------------------------------
