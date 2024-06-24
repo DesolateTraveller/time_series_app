@@ -3,7 +3,6 @@ numpy
 pandas
 matplotlib
 seaborn
-embedchain
 #uuid
 #toml
 base64
