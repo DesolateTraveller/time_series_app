@@ -14,3 +14,4 @@ datetime
 plotly
 prophet
 vacances_scolaires_france
+holidays==0.24
