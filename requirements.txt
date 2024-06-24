@@ -4,3 +4,13 @@ pandas
 matplotlib
 seaborn
 embedchain
+uuid
+toml
+base64
+requests
+pathlib
+collections
+datetime
+plotly
+prophet
+vacances_scolaires_france
