@@ -57,6 +57,40 @@ from ts_app_prep import (
 )
 from ts_app_prep import forecast_workflow
 from ts_app_prep import load_config, load_image
+
+import io
+import os
+import re
+import uuid
+import toml
+import base64
+import requests
+import toml
+from PIL import Image
+from pathlib import Path
+from base64 import b64encode
+from zipfile import ZipFile
+#---------------------------------------
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+#---------------------------------------
+import datetime
+from collections import defaultdict
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional, Tuple
+#---------------------------------------
+import plotly.express as px
+import plotly.figure_factory as ff
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+#---------------------------------------
+from prophet import Prophet
+from prophet.plot import plot_plotly
+from prophet.diagnostics import cross_validation
+#---------------------------------------
+from vacances_scolaires_france import SchoolHolidayDates
 #---------------------------------------------------------------------------------------------------------------------------------
 ### Title and description for your Streamlit app
 #---------------------------------------------------------------------------------------------------------------------------------
