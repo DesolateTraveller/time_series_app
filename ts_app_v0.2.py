@@ -88,11 +88,10 @@ if data_source == "File Upload" :
                 df = pd.read_csv(file)
     st.sidebar.divider()
 
-#---------------------------------------------------------------------------------------------------------------------------------
-#---------------------------------------------------------------------------------------------------------------------------------
+    #-----------------------------------------------
 
     st.subheader("Parameters configuration", divider='blue')
-    st.write('In this section you can modify the algorithm settings.')
+    st.caption('In this section you can modify the algorithm settings.')
 
     col1, col2, col3, col4, col5, col6 = st.columns(6)
 
@@ -197,3 +196,37 @@ if data_source == "File Upload" :
             
             st.write("The seasonality change point controls the flexibility of the seasonality.")
             seasonality_scale= st.select_slider(label= 'Seasonality prior scale',options=seasonality_scale_values)
+
+    st.divider()
+
+    #-----------------------------------------------
+
+    if not df.empty:
+        columns = list(df.columns)
+        
+        col1,col2 = st.columns(2)
+        
+        with col1:
+            date_col = st.selectbox("Select date column",index= 0,options=columns,key="date", help='Column to be parsed as a date')
+        with col2:
+            metric_col = st.selectbox("Select Target column",index=1,options=columns,key="values", help='Quantity to be forecasted')
+
+        df = prep_data(df, date_col, metric_col)
+        output = 0
+
+        Options = st.radio('Options', ['Plot Time-Seies data', 'Show Dataframe', 'Show Descriptive Statistics'], horizontal=True, label_visibility='collapsed', key = 'options')
+        
+        if Options == 'Plot Time-Seies data':
+            try:
+                line_chart = alt.Chart(df).mark_line().encode(
+                    x = 'ds:T',
+                    y = "y:Q",tooltip=['ds:T', 'y']).properties(title="Time series preview").interactive()
+                st.altair_chart(line_chart,use_container_width=True)
+                
+            except:
+                st.line_chart(df['y'],use_container_width =True,height = 300)
+
+        if Options =='Show Dataframe':
+            st.dataframe(df, use_container_width=True)
+        if Options == 'Show Descriptive Statistics':
+            st.write(df.describe().T, use_container_width=True)
