@@ -33,9 +33,9 @@ import plotly.figure_factory as ff
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 #---------------------------------------
-from prophet import Prophet
-from prophet.plot import plot_plotly
-from prophet.diagnostics import cross_validation
+#from prophet import Prophet
+#from prophet.plot import plot_plotly
+#from prophet.diagnostics import cross_validation
 #---------------------------------------
 from vacances_scolaires_france import SchoolHolidayDates
 #---------------------------------------
