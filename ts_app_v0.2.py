@@ -90,7 +90,7 @@ if data_source == "File Upload" :
 
     #-----------------------------------------------
 
-    st.subheader("Parameters configuration", divider='blue')
+    st.subheader("Parameters", divider='blue')
     st.caption('In this section you can modify the algorithm settings.')
 
     col1, col2, col3, col4, col5, col6 = st.columns(6)
@@ -207,7 +207,7 @@ if data_source == "File Upload" :
 
         with tab1:
 
-            st.subheader("Input Information", divider='blue')
+            #st.subheader("Input Information", divider='blue')
         
             columns = list(df.columns)
             col1,col2 = st.columns(2)
@@ -267,3 +267,30 @@ if data_source == "File Upload" :
 
                     else:
                         st.warning('Invalid configuration')
+           
+                if st.checkbox("Generate forecast (Predict)",key="predict"):
+                    try:
+                        with st.spinner("Forecasting.."):
+                            forecast = m.predict(future)
+                            st.success('Prediction generated successfully')
+                            st.dataframe(forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']], use_container_width=True)
+                            fig1 = m.plot(forecast)
+                            st.write('Forecast plot')
+                            st.write(fig1)                   
+                            output = 1
+
+                        if growth == 'linear':
+                            fig2 = m.plot(forecast)
+                            a = add_changepoints_to_plot(fig2.gca(), m, forecast)
+                            st.write(fig2)
+                            output = 1
+                    except:
+                        st.warning("You need to train the model first.. ")
+
+                if st.checkbox('Show components'):
+                    try:
+                        with st.spinner("Loading.."):
+                            fig3 = m.plot_components(forecast)
+                            st.write(fig3)
+                    except: 
+                        st.warning("Requires forecast generation..")
