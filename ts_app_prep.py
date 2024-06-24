@@ -33,9 +33,9 @@ import plotly.figure_factory as ff
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 #---------------------------------------
-#from prophet import Prophet
-#from prophet.plot import plot_plotly
-#Afrom prophet.diagnostics import cross_validation
+from prophet import Prophet
+from prophet.plot import plot_plotly
+from prophet.diagnostics import cross_validation
 #---------------------------------------
 from vacances_scolaires_france import SchoolHolidayDates
 
@@ -116,8 +116,8 @@ def write_bytesio_to_file(filename: str, bytesio: io.BytesIO) -> None:
         outfile.write(bytesio.getbuffer())
 #-------------------------------
 @st.cache(ttl=300)
-def load_image(image_name: str) -> Image:
-    return Image.open(Path(get_project_root()) / f"references/{image_name}")
+#def load_image(image_name: str) -> Image:
+    #return Image.open(Path(get_project_root()) / f"references/{image_name}")
 
 #---------------------------------------------------------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------------------------------------------------------
@@ -2888,4 +2888,5 @@ def add_prophet_holidays(
     holidays_df = pd.concat(holidays_df_list, sort=True)
     model.holidays = holidays_df
     return model
+
 
