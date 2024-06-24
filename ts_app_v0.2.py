@@ -62,3 +62,13 @@ def prep_data(df, date_col, metric_col):
     df_input = df_input[['ds','y']]
     df_input =  df_input.sort_values(by='ds',ascending=True)
     return df_input
+
+
+#---------------------------------------------------------------------------------------------------------------------------------
+### Main App
+#---------------------------------------------------------------------------------------------------------------------------------
+
+st.sidebar.header("Input", divider='blue')
+st.sidebar.info('Please choose from the following options and follow the instructions to start the application.', icon="ℹ️")
+data_source = st.sidebar.radio("**:blue[Select the main source]**", ["File Upload", "AWS S3","Sharepoint"],
+                               index=0, horizontal=True, label_visibility='collapsed', key = 'Data')
