@@ -71,3 +71,37 @@ def prep_data(df, date_col, metric_col):
 st.sidebar.header("Input", divider='blue')
 st.sidebar.info('Please choose from the following options and follow the instructions to start the application.', icon="ℹ️")
 data_source = st.sidebar.radio("**:blue[Select the main source]**", ["File Upload", "AWS S3","Sharepoint"],)
+
+#---------------------------------------------------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------------------------------------
+
+if data_source == "File Upload" :   
+
+    input = st.sidebar.file_uploader("**:blue[Choose a file]**",
+                                type=["xlsx","csv"],
+                                accept_multiple_files=True,
+                                key=0)
+    if input is not None:
+        with st.spinner('Loading data..'):
+            df = pd.DataFrame()
+            df = load_csv()
+    st.sidebar.divider()
+
+#---------------------------------------------------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------------------------------------
+
+    st.subheader("Parameters configuration", divider='blue')
+    st.write('In this section you can modify the algorithm settings.')
+
+    col1, col2, col3, col4, col5, col6 = st.columns(6)
+
+    with col1:        
+        
+        with st.expander("**Horizon**"):
+            periods_input = st.number_input('Select how many future periods (days) to forecast.',
+            min_value = 1, max_value = 366,value=90)
+
+    with col2: 
+        with st.expander("**Seasonality**"):
+            st.markdown("""The default seasonality used is additive, but the best choice depends on the specific case, therefore specific domain knowledge is required.""")
+            seasonality = st.radio(label='Seasonality',options=['additive','multiplicative'])
