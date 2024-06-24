@@ -294,7 +294,7 @@ if data_source == "File Upload" :
                     except:
                         st.warning("You need to train the model first.. ")
                     st.divider()
-                    
+
                 if st.checkbox('Show components'):
                     try:
                         with st.spinner("Loading.."):
@@ -303,3 +303,54 @@ if data_source == "File Upload" :
                     except: 
                         st.warning("Requires forecast generation..")
    
+        with tab3:
+
+            st.write("In this section it is possible to do cross-validation of the model.")
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                with st.expander("**Explanation**"):
+                    st.markdown("""The Prophet library makes it possible to divide our historical data into training data and testing data for cross validation.""")
+                    st.write("Horizon: The data set aside for validation.")
+
+            with col2:    
+                with st.expander("**Cross-validation**"):
+                    horizon = st.number_input(value= 90, label="Horizon",min_value=30,max_value=365)
+
+
+            st.subheader("Metrics", divider='blue')           
+            if input:
+                if output == 1:
+
+                    metrics = 0
+                    if st.checkbox('Calculate metrics'):
+                        with st.spinner("Cross validating.."):
+                            try:
+                                df_cv = cross_validation(m, 
+                                                horizon = f"{horizon} days",
+                                                parallel="processes")                                                                  
+                            
+                                df_p= performance_metrics(df_cv)
+                                metrics = ['mae','mape', 'mse', 'rmse']
+                                selected_metric = st.selectbox("Select metric to plot",options=metrics)
+                                if selected_metric:
+                                    fig4 = plot_cross_validation_metric(df_cv, metric=selected_metric)
+                                    st.write(fig4)
+                                    # # PERFORMANCE METRICS TABLE
+                                    # st.dataframe(df_p, use_container_width=True)
+                                    # metrics = 1
+
+                            except Exception as e:
+                                st.error(f"Error during Cross-validation: {e}")
+                                metrics=0
+
+                    # if metrics == 1:
+                    #     metrics = ['mae','mape', 'mse', 'rmse']
+                    #     selected_metric = st.selectbox("Select metric to plot",options=metrics)
+                    #     if selected_metric:
+                    #         fig4 = plot_cross_validation_metric(df_cv, metric=selected_metric)
+                    #         st.write(fig4)
+
+                else:
+                    st.write("Create a forecast to see metrics")
