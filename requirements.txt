@@ -1,9 +1,6 @@
 streamlit
 matplotlib
 seaborn
-uuid
-#toml
-#base64
 requests
 pathlib
 collections2
