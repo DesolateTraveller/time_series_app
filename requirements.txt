@@ -9,7 +9,7 @@ uuid
 #base64
 requests
 pathlib
-collections
+collections2
 datetime
 plotly
 prophet
