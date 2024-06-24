@@ -3,7 +3,7 @@ streamlit
 numpy
 pandas
 matplotlib
-seaborn
+#seaborn
 #uuid
 #toml
 base64
