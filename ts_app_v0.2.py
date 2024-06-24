@@ -84,8 +84,8 @@ if data_source == "File Upload" :
     if input is not None:
         with st.spinner('Loading data..'):
             df = pd.DataFrame()
-            #df = pd.read_csv(input)
-            df = load_csv()
+            df = pd.read_csv(input)
+            #df = load_csv()
     st.sidebar.divider()
 
 #---------------------------------------------------------------------------------------------------------------------------------
