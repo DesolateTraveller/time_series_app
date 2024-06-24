@@ -4,7 +4,7 @@ pandas
 matplotlib
 seaborn
 embedchain
-uuid
+#uuid
 #toml
 base64
 requests
