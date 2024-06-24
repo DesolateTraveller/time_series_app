@@ -84,6 +84,7 @@ if data_source == "File Upload" :
     if input is not None:
         with st.spinner('Loading data..'):
             df = pd.DataFrame()
+            #df = pd.read_csv(input)
             df = load_csv()
     st.sidebar.divider()
 
@@ -102,6 +103,16 @@ if data_source == "File Upload" :
             min_value = 1, max_value = 366,value=90)
 
     with col2: 
+
+        with st.expander("**Trend components**"):
+            st.write("Add or remove components:")
+            daily = st.checkbox("Daily")
+            weekly= st.checkbox("Weekly")
+            monthly = st.checkbox("Monthly")
+            yearly = st.checkbox("Yearly")
+
+    with col3: 
+        
         with st.expander("**Seasonality**"):
             st.markdown("""The default seasonality used is additive, but the best choice depends on the specific case, therefore specific domain knowledge is required.""")
             seasonality = st.radio(label='Seasonality',options=['additive','multiplicative'])
