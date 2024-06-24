@@ -12,6 +12,6 @@ pathlib
 collections2
 datetime
 plotly
-prophet
+prophet==1.1.2
 vacances_scolaires_france
 holidays==0.24
