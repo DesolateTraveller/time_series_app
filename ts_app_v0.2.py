@@ -186,7 +186,7 @@ if data_source == "File Upload" :
     with col6: 
 
         with st.expander('**Hyperparameters**'):
-            st.write('In this section it is possible to tune the scaling coefficients.')
+            #st.write('In this section it is possible to tune the scaling coefficients.')
             
             seasonality_scale_values= [0.01, 0.1, 1.0, 10.0]    
             changepoint_scale_values= [0.001, 0.01, 0.1, 0.5]
