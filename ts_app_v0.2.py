@@ -3,6 +3,7 @@ import pandas as pd
 from prophet import Prophet
 from prophet.diagnostics import cross_validation, performance_metrics
 from prophet.plot import plot_cross_validation_metric
+from prophet.plot import add_changepoints_to_plot
 import itertools
 
 st.set_page_config(page_title="Time Series Forecasting | App",
