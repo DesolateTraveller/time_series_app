@@ -91,7 +91,8 @@ if data_source == "File Upload" :
 #-----------------------------------------------------------------------------------------------------
 
     #st.subheader("Parameters", divider='blue')
-    st.caption('**In this section you can modify the algorithm settings.**')
+    st.Markdown("**A web-app to train, evaluate and optimise forecasting model in a visual way **")
+    st.caption("**In this section you can modify the algorithm settings.**")
 
     col1, col2, col3, col4, col5, col6 = st.columns(6)
 
