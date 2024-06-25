@@ -97,7 +97,8 @@ if data_source == "File Upload" :
 
     with col1:        
         
-        with st.expander("**Horizon**"):
+        #with st.expander("**Horizon**"):
+        with st.sidebar.popover("**:blue[Horizon]**"):     
             periods_input = st.number_input('Select how many future periods (days) to forecast.',
             min_value = 1, max_value = 366,value=90)
 
