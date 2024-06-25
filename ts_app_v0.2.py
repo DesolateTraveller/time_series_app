@@ -88,7 +88,7 @@ if data_source == "File Upload" :
                 df = pd.read_csv(file)
     st.sidebar.divider()
 
-    #-----------------------------------------------
+#-----------------------------------------------------------------------------------------------------
 
     st.subheader("Parameters", divider='blue')
     st.caption('In this section you can modify the algorithm settings.')
@@ -199,11 +199,13 @@ if data_source == "File Upload" :
 
     st.divider()
 
-    #-----------------------------------------------
+#-----------------------------------------------------------------------------------------------------
 
     if not df.empty:
 
         tab1, tab2, tab3, tab4, tab5 = st.tabs(["**Information**","**Forecast**","**Validation**","**Tuning**","**Result**",])
+
+#----------------------------------------------------
 
         with tab1:
 
@@ -237,6 +239,8 @@ if data_source == "File Upload" :
 
             if Options == 'Show Descriptive Statistics':
                 st.write(df.describe().T, use_container_width=True)
+
+#----------------------------------------------------
 
         with tab2:
 
@@ -302,7 +306,9 @@ if data_source == "File Upload" :
                             st.write(fig3)
                     except: 
                         st.warning("Requires forecast generation..")
-   
+
+#----------------------------------------------------
+
         with tab3:
 
             st.write("In this section it is possible to do cross-validation of the model.")
@@ -354,3 +360,65 @@ if data_source == "File Upload" :
 
                 else:
                     st.write("Create a forecast to see metrics")
+
+#----------------------------------------------------
+
+        with tab4:
+        
+            st.write("In this section it is possible to find the best combination of hyperparamenters.")
+
+            param_grid = {'changepoint_prior_scale': [0.001, 0.01, 0.1, 0.5],
+                        'seasonality_prior_scale': [0.01, 0.1, 1.0, 10.0],}
+
+            # Generate all combinations of parameters
+            all_params = [dict(zip(param_grid.keys(), v)) for v in itertools.product(*param_grid.values())]
+            mapes = []  # Store the MAPE for each params here
+
+            if input:
+                if output == 1:
+
+                    if st.button("Optimize hyperparameters"):            
+                        with st.spinner("Finding best combination. Please wait.."):                        
+                            try:
+                                # Use cross validation to evaluate all parameters
+                                for params in all_params:
+                                    m = Prophet(**params).fit(df)  # Fit model with given params
+                                    df_cv = cross_validation(m, horizon=f"{horizon} days", parallel="processes")
+                                    df_p = performance_metrics(df_cv, rolling_window=1)
+                                    mapes.append(df_p['mape'].values[0])
+                            except Exception as e:
+                                st.error(f"Error during Hyperparameter optimization: {e}")
+                        
+
+                        # Find the best parameters
+                        tuning_results = pd.DataFrame(all_params)
+                        tuning_results['mape'] = mapes
+                        st.dataframe(tuning_results, use_container_width=True)
+                            
+                        best_params = all_params[np.argmin(mapes)]
+                    
+                        st.write('The best parameter combination is:')
+                        st.write(best_params)
+                
+                else:
+                    st.write("Create a model to optimize") 
+#----------------------------------------------------
+
+        with tab5:   
+        
+            st.write("Finally you can export your result forecast.")
+        
+            if input:
+                if output == 1:               
+                    forecast_df = pd.DataFrame(forecast[['ds','yhat','yhat_lower','yhat_upper']])
+                    forecast_data = forecast_df.to_csv(index=False)
+                    st.download_button(label="Download Forecast CSV",
+                                data=forecast_data,
+                                file_name=f'Forecast_results.csv',
+                                mime='text/csv',
+                                key='download forecast')
+                    st.dataframe(forecast_df, use_container_width=True)
+             
+         
+                
+   
