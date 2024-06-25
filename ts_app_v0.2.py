@@ -322,34 +322,29 @@ if data_source == "File Upload" :
 
             with col2:    
                 with st.expander("**Cross-validation**"):
-                    horizon = st.number_input(value= 90, label="Horizon",min_value=30,max_value=365)
-
+                    horizon = st.number_input(value= 90,label="Horizon",min_value=30,max_value=365)
 
             st.subheader("Metrics", divider='blue')           
             if input:
                 if output == 1:
-
                     metrics = 0
-                    if st.checkbox('Calculate metrics'):
-                        with st.spinner("Cross validating.."):
-                            try:
-                                df_cv = cross_validation(m, 
-                                                horizon = f"{horizon} days",
-                                                parallel="processes")                                                                  
-                            
-                                df_p= performance_metrics(df_cv)
-                                metrics = ['mae','mape', 'mse', 'rmse']
-                                selected_metric = st.selectbox("Select metric to plot",options=metrics)
-                                if selected_metric:
-                                    fig4 = plot_cross_validation_metric(df_cv, metric=selected_metric)
-                                    st.write(fig4)
+                if st.checkbox('Calculate metrics'):
+                    with st.spinner("Cross validating.."):
+                        try:
+                            df_cv = cross_validation(m, horizon = f"{horizon} days",parallel="processes")                                                                  
+                            df_p= performance_metrics(df_cv)
+                            metrics = ['mae','mape', 'mse', 'rmse']
+                            selected_metric = st.selectbox("Select metric to plot",options=metrics)
+                            if selected_metric:
+                                fig4 = plot_cross_validation_metric(df_cv, metric=selected_metric)
+                                st.write(fig4)
                                     # # PERFORMANCE METRICS TABLE
                                     # st.dataframe(df_p, use_container_width=True)
                                     # metrics = 1
 
-                            except Exception as e:
-                                st.error(f"Error during Cross-validation: {e}")
-                                metrics=0
+                        except Exception as e:
+                            st.error(f"Error during Cross-validation: {e}")
+                            metrics=0
 
                     # if metrics == 1:
                     #     metrics = ['mae','mape', 'mse', 'rmse']
@@ -358,8 +353,8 @@ if data_source == "File Upload" :
                     #         fig4 = plot_cross_validation_metric(df_cv, metric=selected_metric)
                     #         st.write(fig4)
 
-                else:
-                    st.write("Create a forecast to see metrics")
+            else:
+                st.write("Create a forecast to see metrics")
 
 #----------------------------------------------------
 
@@ -367,8 +362,8 @@ if data_source == "File Upload" :
         
             st.write("In this section it is possible to find the best combination of hyperparamenters.")
 
-            param_grid = {'changepoint_prior_scale': [0.001, 0.01, 0.1, 0.5],
-                        'seasonality_prior_scale': [0.01, 0.1, 1.0, 10.0],}
+            param_grid = {'changepoint_prior_scale': changepoint_scale_values,
+                        'seasonality_prior_scale': seasonality_scale_values,}
 
             # Generate all combinations of parameters
             all_params = [dict(zip(param_grid.keys(), v)) for v in itertools.product(*param_grid.values())]
