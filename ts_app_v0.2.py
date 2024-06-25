@@ -325,10 +325,10 @@ if data_source == "File Upload" :
                     horizon = st.number_input('Enter forecast horizon in days:', min_value=1, max_value=365, value=30)
 
             st.subheader("Metrics", divider='blue')           
-            if input:
-                if output == 1:
-                    metrics = 0
-                if st.checkbox('Calculate metrics'):
+            #if input:
+                #if output == 1:
+                    #metrics = 0
+            if st.checkbox('Calculate metrics'):
                     with st.spinner("Cross validating.."):
                         try:
                             df_cv = cross_validation(m, horizon = f"{horizon} days")                                                                  
@@ -346,7 +346,7 @@ if data_source == "File Upload" :
 
                         except Exception as e:
                             st.error(f"Error during Cross-validation: {e}")
-                            metrics=0
+                            #metrics=0
 
                     # if metrics == 1:
                     #     metrics = ['mae','mape', 'mse', 'rmse']
