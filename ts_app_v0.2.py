@@ -7,7 +7,6 @@ from prophet.plot import add_changepoints_to_plot
 import itertools
 
 st.set_page_config(page_title="Time Series Forecasting | App",
-                   page_icon='https://www.clariant.com/images/clariant-logo-small.svg',
                    layout="wide")
 
 st.title(f"Time Series Forecasting App | v0.1")
