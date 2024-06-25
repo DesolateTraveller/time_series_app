@@ -104,7 +104,7 @@ if data_source == "File Upload" :
     with col2: 
 
         with st.expander("**Trend**"):
-            st.write("Add or remove components:")
+            #st.write("Add or remove components:")
             daily = st.checkbox("Daily")
             weekly= st.checkbox("Weekly")
             monthly = st.checkbox("Monthly")
@@ -113,13 +113,13 @@ if data_source == "File Upload" :
     with col3: 
         
         with st.expander("**Seasonality**"):
-            st.markdown("""The default seasonality used is additive, but the best choice depends on the specific case, therefore specific domain knowledge is required.""")
+            #st.markdown("""The default seasonality used is additive, but the best choice depends on the specific case, therefore specific domain knowledge is required.""")
             seasonality = st.radio(label='Seasonality',options=['additive','multiplicative'])
 
     with col4: 
         
         with st.expander("**Growth**"):
-            st.write('Prophet uses by default a linear growth model.')         
+            #st.write('Prophet uses by default a linear growth model.')         
 
             growth = st.radio(label='Growth model',options=['linear',"logistic"]) 
             if growth == 'linear':
@@ -191,11 +191,11 @@ if data_source == "File Upload" :
             seasonality_scale_values= [0.01, 0.1, 1.0, 10.0]    
             changepoint_scale_values= [0.001, 0.01, 0.1, 0.5]
 
-            st.write("The changepoint prior scale determines the flexibility of the trend, and in particular how much the trend changes at the trend changepoints.")
-            changepoint_scale= st.select_slider(label= 'Changepoint prior scale',options=changepoint_scale_values)
+            #st.write("The changepoint prior scale determines the flexibility of the trend, and in particular how much the trend changes at the trend changepoints.")
+            changepoint_scale= st.select_slider(label= 'Changepoint prior scale (flexibility of the trend)',options=changepoint_scale_values)
             
-            st.write("The seasonality change point controls the flexibility of the seasonality.")
-            seasonality_scale= st.select_slider(label= 'Seasonality prior scale',options=seasonality_scale_values)
+            #st.write("The seasonality change point controls the flexibility of the seasonality.")
+            seasonality_scale= st.select_slider(label= 'Seasonality prior scale (flexibility of the seasonality)',options=seasonality_scale_values)
 
     st.divider()
 
