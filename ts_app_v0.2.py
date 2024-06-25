@@ -322,7 +322,7 @@ if data_source == "File Upload" :
 
             with col2:    
                 with st.expander("**Cross-validation**"):
-                    horizon = st.number_input(value= 90,label="Horizon",min_value=30,max_value=365)
+                    horizon = st.number_input('Enter forecast horizon in days:', min_value=1, max_value=365, value=30)
 
             st.subheader("Metrics", divider='blue')           
             if input:
@@ -331,13 +331,15 @@ if data_source == "File Upload" :
                 if st.checkbox('Calculate metrics'):
                     with st.spinner("Cross validating.."):
                         try:
-                            df_cv = cross_validation(m, horizon = f"{horizon} days",parallel="processes")                                                                  
-                            df_p= performance_metrics(df_cv)
+                            df_cv = cross_validation(m, horizon = f"{horizon} days",parallel="None")                                                                  
+                            df_p = performance_metrics(df_cv)
+                            st.dataframe(df_p)
+
                             metrics = ['mae','mape', 'mse', 'rmse']
                             selected_metric = st.selectbox("Select metric to plot",options=metrics)
                             if selected_metric:
                                 fig4 = plot_cross_validation_metric(df_cv, metric=selected_metric)
-                                st.write(fig4)
+                                st.pyplot(fig4)
                                     # # PERFORMANCE METRICS TABLE
                                     # st.dataframe(df_p, use_container_width=True)
                                     # metrics = 1
