@@ -97,8 +97,7 @@ if data_source == "File Upload" :
 
     with col1:        
         
-        #with st.expander("**Horizon**"):
-        with st.popover("**:blue[Horizon]**"):     
+        with st.expander("**Horizon**"):     
             periods_input = st.number_input('Select how many future periods (days) to forecast.',
             min_value = 1, max_value = 366,value=90)
 
@@ -414,4 +413,6 @@ if data_source == "File Upload" :
                                 mime='text/csv',
                                 key='download forecast')
                     st.dataframe(forecast_df, use_container_width=True)
-            
+             
+         
+                
