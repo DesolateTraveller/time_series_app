@@ -91,7 +91,7 @@ if data_source == "File Upload" :
 #-----------------------------------------------------------------------------------------------------
 
     #st.subheader("Parameters", divider='blue')
-    st.markdown("**In this section you can modify the algorithm settings.**")
+    #st.markdown("**In this section you can modify the algorithm settings.**")
 
     col1, col2, col3, col4, col5, col6 = st.columns(6)
 
