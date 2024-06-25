@@ -331,7 +331,7 @@ if data_source == "File Upload" :
                 if st.checkbox('Calculate metrics'):
                     with st.spinner("Cross validating.."):
                         try:
-                            df_cv = cross_validation(m, horizon = f"{horizon} days",parallel="None")                                                                  
+                            df_cv = cross_validation(m, horizon = f"{horizon} days")                                                                  
                             df_p = performance_metrics(df_cv)
                             st.dataframe(df_p)
 
