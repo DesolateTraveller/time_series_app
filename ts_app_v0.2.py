@@ -228,7 +228,7 @@ if data_source == "File Upload":
 #----------------------------------------
 
         if not df.empty:
-            tab1, tab2, tab3, tab4, tab5 = st.tabs(["**Information**", "**Visualization**", "**Forecast**", "**Validation & Tuning**", "**Result**"])
+            tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["**Information**", "**Visualization**", "**Forecast**", "**Validation & Tuning**", "**Result**", "**Definitions**"])
             
             #----------------------------------------
             with tab1:
@@ -423,3 +423,31 @@ if data_source == "File Upload":
                                        file_name='Forecast_results.csv',
                                        mime='text/csv')
 
+            #---------------------------------------- 
+            with tab6:
+
+                st.markdown("""
+                **Rolling Mean & Standard Deviation**: These are used to analyze the time series' moving average and volatility over a specified window.
+            
+                **Decomposition**: Decomposes the time series into trend, seasonality, and residual components to better understand its structure.
+            
+                **ADF Test (Augmented Dickey-Fuller Test)**: A statistical test used to check if a time series is stationary. Null hypothesis is that the series is non-stationary.
+            
+                **KPSS Test (Kwiatkowski-Phillips-Schmidt-Shin Test)**: Another test for stationarity. Null hypothesis is that the series is stationary.
+            
+                **Differencing**: A method to transform a non-stationary series into a stationary one by subtracting the previous observations from the current observation.
+            
+                **Seasonality Mode**: Indicates if the seasonality is additive or multiplicative in the model.
+            
+                **Changepoint Prior Scale**: A hyperparameter that controls the flexibility of the trend in the Prophet model.
+            
+                **Seasonality Prior Scale**: A hyperparameter that controls the flexibility of the seasonality in the Prophet model.
+            
+                **Cross-validation**: A method to evaluate the model’s performance by dividing the dataset into training and testing parts multiple times.
+            
+                **MAPE (Mean Absolute Percentage Error)**: A metric to measure the accuracy of the forecasted values as a percentage.
+            
+                **Holidays**: Incorporating holidays can improve the forecast by accounting for special events that impact the data.
+            
+                **Growth Models**: Linear or logistic growth assumptions for the time series. Logistic growth is used for series that have a saturation point.
+                """)                
