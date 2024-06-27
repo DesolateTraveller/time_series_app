@@ -87,12 +87,14 @@ def auto_detect_columns(df):
     
     return date_col, metric_col
 
+@st.cache_data(ttl="2h"
 def prep_data(df, date_col, metric_col):
     df = df.rename({date_col: "ds", metric_col: "y"}, errors='raise', axis=1)
     st.success("The selected date column is now labeled as **ds** and the Target column as **y**")
     df = df[['ds', 'y']].sort_values(by='ds', ascending=True)
     return df
 
+@st.cache_data(ttl="2h"
 def plot_rolling_statistics(df, window=12):
     df.set_index('ds', inplace=True)
     rolling_mean = df['y'].rolling(window=window).mean()
@@ -107,6 +109,7 @@ def plot_rolling_statistics(df, window=12):
     st.pyplot(plt)
     df.reset_index(inplace=True)
 
+@st.cache_data(ttl="2h"
 def decompose_series(df, model='additive', period=30):
     df.set_index('ds', inplace=True)
     decomposition = seasonal_decompose(df['y'], model=model, period=period)
@@ -125,6 +128,7 @@ def decompose_series(df, model='additive', period=30):
     plt.tight_layout()
     st.pyplot(fig)
 
+@st.cache_data(ttl="2h"
 def test_stationarity(df):
     df.set_index('ds', inplace=True)
     result = adfuller(df['y'].dropna())
@@ -233,13 +237,15 @@ if data_source == "File Upload":
                 columns = list(df.columns)
                 col1, col2 = st.columns(2)
                 with col1:
-                    date_col = st.selectbox("**Select date column**", options=columns, key="date", help='Column to be parsed as a date')
+                    date_col = st.selectbox("**Select date column**", options=columns, key="date", 
+                                            index=df.columns.get_loc(date_col) if date_col else 0,help='Column to be parsed as a date')
                 with col2:
-                    metric_col = st.selectbox("**Select target column**", options=columns, key="values", help='Quantity to be forecasted')
+                    metric_col = st.selectbox("**Select target column**", options=columns, key="values", 
+                                              df.columns.get_loc(metric_col) if metric_col else 1,help='Quantity to be forecasted')
                 
-                df = prep_data(df, date_col, metric_col)
-                st.divider()
-
+                if st.button("Confirm Columns"):
+                    df = prep_data(df, date_col, metric_col)
+                    st.divider()
 
                 Options = st.radio('Options', ['Plot data', 'Show data', 'Show Statistics'], horizontal=True, label_visibility='collapsed', key='options')
                 st.divider()
@@ -260,9 +266,9 @@ if data_source == "File Upload":
             #----------------------------------------
             with tab2:                
                 
-                Options_viz = st.radio('Options', ['Rolling Mean & Standard Definition', 'Decomposition', 'Stationarity'], horizontal=True, label_visibility='collapsed', key='options_viz')
+                Options_viz = st.radio('Options', ['Rolling Mean & Standard Deviation', 'Decomposition', 'Stationarity'], horizontal=True, label_visibility='collapsed', key='options_viz')
 
-                if Options_viz == 'Rolling Mean & Standard Definition':
+                if Options_viz == 'Rolling Mean & Standard Deviation':
                     window_size = st.number_input("Window size for rolling statistics", min_value=2, max_value=30, value=12)
                     plot_rolling_statistics(df.copy(), window=window_size)
                     st.divider()
