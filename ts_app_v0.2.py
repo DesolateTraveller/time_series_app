@@ -248,21 +248,21 @@ if data_source == "File Upload":
                     df = prep_data(df, date_col, metric_col)
                     st.divider()
 
-                Options = st.radio('Options', ['Plot data', 'Show data', 'Show Statistics'], horizontal=True, label_visibility='collapsed', key='options')
-                st.divider()
+                    Options = st.radio('Options', ['Plot data', 'Show data', 'Show Statistics'], horizontal=True, label_visibility='collapsed', key='options')
+                    st.divider()
 
-                if Options == 'Plot data':
-                    try:
-                        line_chart = alt.Chart(df).mark_line().encode(x='ds:T', y="y:Q", tooltip=['ds:T', 'y']).properties(title="Time series preview").interactive()
-                        st.altair_chart(line_chart, use_container_width=True)
-                    except:
-                        st.line_chart(df['y'], use_container_width=True, height=300)
+                    if Options == 'Plot data':
+                        try:
+                            line_chart = alt.Chart(df).mark_line().encode(x='ds:T', y="y:Q", tooltip=['ds:T', 'y']).properties(title="Time series preview").interactive()
+                            st.altair_chart(line_chart, use_container_width=True)
+                        except:
+                            st.line_chart(df['y'], use_container_width=True, height=300)
 
-                if Options == 'Show data':
-                    st.dataframe(df.head(), use_container_width=True)
+                    if Options == 'Show data':
+                        st.dataframe(df.head(), use_container_width=True)
 
-                if Options == 'Show Statistics':
-                    st.write(df.describe().T, use_container_width=True)
+                    if Options == 'Show Statistics':
+                        st.write(df.describe().T, use_container_width=True)
 
             #----------------------------------------
             with tab2:                
