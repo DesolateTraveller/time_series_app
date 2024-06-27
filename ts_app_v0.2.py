@@ -53,7 +53,7 @@ st.divider()
 #---------------------------------------------------------------------------------------------------------------------------------
 ### Functions & Definitions
 #---------------------------------------------------------------------------------------------------------------------------------
-
+@st.cache_data(ttl="2h")
 def load_file(file):
     file_extension = file.name.split('.')[-1]
     if file_extension == 'csv':
@@ -65,6 +65,7 @@ def load_file(file):
         df = pd.DataFrame()
     return df
 
+@st.cache_data(ttl="2h")
 def auto_detect_columns(df):
     date_col = None
     metric_col = None
@@ -87,14 +88,14 @@ def auto_detect_columns(df):
     
     return date_col, metric_col
 
-@st.cache_data(ttl="2h"
+@st.cache_data(ttl="2h")
 def prep_data(df, date_col, metric_col):
     df = df.rename({date_col: "ds", metric_col: "y"}, errors='raise', axis=1)
     st.success("The selected date column is now labeled as **ds** and the Target column as **y**")
     df = df[['ds', 'y']].sort_values(by='ds', ascending=True)
     return df
 
-@st.cache_data(ttl="2h"
+@st.cache_data(ttl="2h")
 def plot_rolling_statistics(df, window=12):
     df.set_index('ds', inplace=True)
     rolling_mean = df['y'].rolling(window=window).mean()
@@ -109,7 +110,7 @@ def plot_rolling_statistics(df, window=12):
     st.pyplot(plt)
     df.reset_index(inplace=True)
 
-@st.cache_data(ttl="2h"
+@st.cache_data(ttl="2h")
 def decompose_series(df, model='additive', period=30):
     df.set_index('ds', inplace=True)
     decomposition = seasonal_decompose(df['y'], model=model, period=period)
@@ -128,7 +129,7 @@ def decompose_series(df, model='additive', period=30):
     plt.tight_layout()
     st.pyplot(fig)
 
-@st.cache_data(ttl="2h"
+@st.cache_data(ttl="2h")
 def test_stationarity(df):
     df.set_index('ds', inplace=True)
     result = adfuller(df['y'].dropna())
