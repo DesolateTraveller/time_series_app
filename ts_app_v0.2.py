@@ -36,15 +36,15 @@ from prophet.plot import plot_cross_validation_metric, add_changepoints_to_plot,
 #---------------------------------------------------------------------------------------------------------------------------------
 #image = Image.open('Image_Clariant.png')
 st.set_page_config(page_title="Forecasting App",
-                   page_icon='https://www.clariant.com/images/clariant-logo-small.svg',
+                   #page_icon='https://www.clariant.com/images/clariant-logo-small.svg',
                    layout="wide",
                    initial_sidebar_state="auto",)
 #st.sidebar.image(image, use_column_width='auto') 
 #----------------------------------------
 st.title(f""":rainbow[Forecasting App | v0.1]""")
-st.markdown('Developed by : **:blue[E&PT - Digital Solutions]** | prepared by : <a href="mailto:avijit.chakraborty@clariant.com">Avijit Chakraborty</a>', 
+st.markdown('Created by | <a href="mailto:avijit.mba18@gmail.com">Avijit Chakraborty</a>', 
             unsafe_allow_html=True)
-st.info('**Disclaimer : :blue[Thank you for visiting the app] | This app is created for internal use, unauthorized uses or copying is strictly prohibited | Click the :blue[sidebar] to follow the instructions to start the applications.**', icon="ℹ️")
+st.info('**Disclaimer : :blue[Thank you for visiting the app] | Unauthorized uses or copying of the app is strictly prohibited | Click the :blue[sidebar] to follow the instructions to start the applications.**', icon="ℹ️")
 #----------------------------------------
 # Set the background image
 #----------------------------------------
