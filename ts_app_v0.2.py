@@ -262,7 +262,7 @@ if data_source == "File Upload":
                 
                 Options_viz = st.radio('Options', ['Rolling Mean & Standard Definition', 'Decomposition', 'Stationarity'], horizontal=True, label_visibility='collapsed', key='options_viz')
 
-                if Options_viz == 'Rolling Mean & Standard Deviation':
+                if Options_viz == 'Rolling Mean & Standard Definition':
                     window_size = st.number_input("Window size for rolling statistics", min_value=2, max_value=30, value=12)
                     plot_rolling_statistics(df.copy(), window=window_size)
                     st.divider()
@@ -275,7 +275,7 @@ if data_source == "File Upload":
                 if Options_viz == 'Stationarity':
                     test_stationarity(df.copy())
                     st.divider()
-                    
+
             #---------------------------------------- 
             with tab3:
 
