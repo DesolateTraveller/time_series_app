@@ -242,7 +242,7 @@ if data_source == "File Upload":
                                             index=df.columns.get_loc(date_col) if date_col else 0,help='Column to be parsed as a date')
                 with col2:
                     metric_col = st.selectbox("**Select target column**", options=columns, key="values", 
-                                              df.columns.get_loc(metric_col) if metric_col else 1,help='Quantity to be forecasted')
+                                              index=df.columns.get_loc(metric_col) if metric_col else 1,help='Quantity to be forecasted')
                 
                 if st.button("Confirm Columns"):
                     df = prep_data(df, date_col, metric_col)
