@@ -427,27 +427,83 @@ if data_source == "File Upload":
             with tab6:
 
                 st.markdown("""
-                **Rolling Mean & Standard Deviation**: These are used to analyze the time series' moving average and volatility over a specified window.
-            
-                **Decomposition**: Decomposes the time series into trend, seasonality, and residual components to better understand its structure.
-            
-                **ADF Test (Augmented Dickey-Fuller Test)**: A statistical test used to check if a time series is stationary. Null hypothesis is that the series is non-stationary.
-            
-                **KPSS Test (Kwiatkowski-Phillips-Schmidt-Shin Test)**: Another test for stationarity. Null hypothesis is that the series is stationary.
-            
-                **Differencing**: A method to transform a non-stationary series into a stationary one by subtracting the previous observations from the current observation.
-            
-                **Seasonality Mode**: Indicates if the seasonality is additive or multiplicative in the model.
-            
-                **Changepoint Prior Scale**: A hyperparameter that controls the flexibility of the trend in the Prophet model.
-            
-                **Seasonality Prior Scale**: A hyperparameter that controls the flexibility of the seasonality in the Prophet model.
-            
-                **Cross-validation**: A method to evaluate the model’s performance by dividing the dataset into training and testing parts multiple times.
-            
-                **MAPE (Mean Absolute Percentage Error)**: A metric to measure the accuracy of the forecasted values as a percentage.
-            
-                **Holidays**: Incorporating holidays can improve the forecast by accounting for special events that impact the data.
-            
-                **Growth Models**: Linear or logistic growth assumptions for the time series. Logistic growth is used for series that have a saturation point.
-                """)                
+                    <style>
+                    .info-box {
+                        background-color: #f9f9f9;
+                        border-left: 6px solid #3498db;
+                        padding: 15px;
+                        margin-bottom: 10px;
+                        border-radius: 5px;
+                        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);}
+                    .info-box h3 {
+                        margin: 0;
+                        padding: 0;
+                        color: #3498db;
+                        font-weight: bold;
+                        }
+                    .info-box p {
+                        margin: 5px 0;
+                        color: #333;
+                        }
+                    </style>
+
+                    <div class="info-box">
+                    <h3>📉 Rolling Mean & Standard Deviation</h3>
+                    <p>Analyze the time series' moving average and volatility over a specified window to understand trends and variability.</p>
+                    </div>
+
+                    <div class="info-box">
+                    <h3>📊 Decomposition</h3>
+                    <p>Break down the time series into trend, seasonality, and residual components to gain insights into its structure.</p>
+                    </div>
+
+                    <div class="info-box">
+                    <h3>🔍 ADF Test (Augmented Dickey-Fuller Test)</h3>
+                    <p>A statistical test used to check if a time series is stationary. The null hypothesis is that the series is non-stationary.</p>
+                    </div>
+
+                    <div class="info-box">
+                    <h3>🔬 KPSS Test (Kwiatkowski-Phillips-Schmidt-Shin Test)</h3>
+                    <p>Another test for stationarity. The null hypothesis is that the series is stationary, complementing the ADF test.</p>
+                    </div>
+
+                    <div class="info-box">
+                    <h3>🔄 Differencing</h3>
+                    <p>A technique to transform a non-stationary series into a stationary one by subtracting the previous observation from the current observation.</p>
+                    </div>
+
+                    <div class="info-box">
+                    <h3>📆 Seasonality Mode</h3>
+                    <p>Determines whether the seasonality component in the model is additive or multiplicative.</p>
+                    </div>
+
+                    <div class="info-box">
+                    <h3>📈 Changepoint Prior Scale</h3>
+                    <p>A hyperparameter that controls the flexibility of the trend in the Prophet model, affecting how much the trend can change at each changepoint.</p>
+                    </div>
+
+                    <div class="info-box">
+                    <h3>🌊 Seasonality Prior Scale</h3>
+                    <p>A hyperparameter that controls the flexibility of the seasonality in the Prophet model, impacting the seasonal component's amplitude.</p>
+                    </div>
+
+                    <div class="info-box">
+                    <h3>🔄 Cross-validation</h3>
+                    <p>A method to evaluate the model’s performance by dividing the dataset into multiple training and testing parts, ensuring the model's robustness.</p>
+                    </div>
+
+                    <div class="info-box">
+                    <h3>📉 MAPE (Mean Absolute Percentage Error)</h3>
+                    <p>A metric used to measure the accuracy of forecasted values as a percentage, providing an intuitive sense of forecast accuracy.</p>
+                    </div>
+
+                    <div class="info-box">
+                    <h3>🎉 Holidays</h3>
+                    <p>Incorporating holidays can improve the forecast by accounting for special events that impact the time series data.</p>
+                    </div>
+
+                    <div class="info-box">
+                    <h3>📈 Growth Models</h3>
+                    <p>Defines whether the time series follows a linear or logistic growth pattern. Logistic growth is used for series expected to plateau at a certain level.</p>
+                    </div>
+                    """, unsafe_allow_html=True)
