@@ -244,24 +244,23 @@ if data_source == "File Upload":
                     metric_col = st.selectbox("**Select target column**", options=columns, key="values", 
                                               index=df.columns.get_loc(metric_col) if metric_col else 1,help='Quantity to be forecasted')
                 
-                if st.button("Confirm Columns"):
-                    df = prep_data(df, date_col, metric_col)
-                    st.divider()
+                df = prep_data(df, date_col, metric_col)
+                st.divider()
 
-                    Options = st.radio('Options', ['Plot data', 'Show data', 'Show Statistics'], horizontal=True, label_visibility='collapsed', key='options')
-                    st.divider()
+                Options = st.radio('Options', ['Plot data', 'Show data', 'Show Statistics'], horizontal=True, label_visibility='collapsed', key='options')
+                st.divider()
 
-                    if Options == 'Plot data':
+                if Options == 'Plot data':
                         try:
                             line_chart = alt.Chart(df).mark_line().encode(x='ds:T', y="y:Q", tooltip=['ds:T', 'y']).properties(title="Time series preview").interactive()
                             st.altair_chart(line_chart, use_container_width=True)
                         except:
                             st.line_chart(df['y'], use_container_width=True, height=300)
 
-                    if Options == 'Show data':
+                if Options == 'Show data':
                         st.dataframe(df.head(), use_container_width=True)
 
-                    if Options == 'Show Statistics':
+                if Options == 'Show Statistics':
                         st.write(df.describe().T, use_container_width=True)
 
             #----------------------------------------
