@@ -30,6 +30,8 @@ from statsmodels.tsa.stattools import adfuller, kpss
 from prophet import Prophet
 from prophet.diagnostics import cross_validation, performance_metrics
 from prophet.plot import plot_cross_validation_metric, add_changepoints_to_plot, plot_plotly, plot_components_plotly
+#----------------------------------------
+from skimpy import skim
 
 #---------------------------------------------------------------------------------------------------------------------------------
 ### Title and description for your Streamlit app
@@ -101,13 +103,14 @@ def plot_rolling_statistics(df, window=12):
     rolling_mean = df['y'].rolling(window=window).mean()
     rolling_std = df['y'].rolling(window=window).std()
 
-    plt.figure(figsize=(10, 6))
-    plt.plot(df['y'], color='blue', label='Original')
-    plt.plot(rolling_mean, color='red', label='Rolling Mean')
-    plt.plot(rolling_std, color='black', label='Rolling Std')
-    plt.legend(loc='best')
-    plt.title('Rolling Mean & Standard Deviation')
-    st.pyplot(plt)
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.plot(df['y'], color='blue', label='Original')
+    ax.plot(rolling_mean, color='red', label='Rolling Mean')
+    ax.plot(rolling_std, color='black', label='Rolling Std')
+    ax.legend(loc='best')
+    ax.set_title('Rolling Mean & Standard Deviation')
+    plt.tight_layout()
+    st.pyplot(fig)
     df.reset_index(inplace=True)
 
 @st.cache_data(ttl="2h")
@@ -116,15 +119,13 @@ def decompose_series(df, model='additive', period=30):
     decomposition = seasonal_decompose(df['y'], model=model, period=period)
     df.reset_index(inplace=True)
 
-    fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, figsize=(10, 8), sharex=True)
-    ax1.plot(decomposition.observed, label='Observed')
-    ax1.legend(loc='best')
-    ax2.plot(decomposition.trend, label='Trend')
-    ax2.legend(loc='best')
-    ax3.plot(decomposition.seasonal, label='Seasonal')
-    ax3.legend(loc='best')
-    ax4.plot(decomposition.resid, label='Residual')
-    ax4.legend(loc='best')
+    fig, axes = plt.subplots(4, 1, figsize=(12, 10), sharex=True)
+    decomposition.observed.plot(ax=axes[0], title='Observed')
+    decomposition.trend.plot(ax=axes[1], title='Trend')
+    decomposition.seasonal.plot(ax=axes[2], title='Seasonal')
+    decomposition.resid.plot(ax=axes[3], title='Residual')
+    for ax in axes:
+        ax.legend(loc='best')
     plt.xlabel('Date')
     plt.tight_layout()
     st.pyplot(fig)
@@ -132,19 +133,30 @@ def decompose_series(df, model='additive', period=30):
 @st.cache_data(ttl="2h")
 def test_stationarity(df):
     df.set_index('ds', inplace=True)
-    result = adfuller(df['y'].dropna())
-
-    st.write('Results of Dickey-Fuller Test:')
-    st.write(f'ADF Statistic: {result[0]:.4f}')
-    st.write(f'p-value: {result[1]:.4f}')
-    st.write('Critical Values:')
-    for key, value in result[4].items():
-        st.write(f'   {key}: {value:.4f}')
-    
+    adf_result = adfuller(df['y'].dropna())
+    kpss_result = kpss(df['y'].dropna(), regression='c')
     df.reset_index(inplace=True)
 
+    adf_output = pd.DataFrame({
+        'Test Statistic': [adf_result[0]],
+        'p-value': [adf_result[1]],
+        'Critical Values': [', '.join([f'{k}: {v:.4f}' for k, v in adf_result[4].items()])]
+    })
+
+    st.write('**Results of Augmented Dickey-Fuller Test:**')
+    st.table(adf_output)
+
+    kpss_output = pd.DataFrame({
+        'Test Statistic': [kpss_result[0]],
+        'p-value': [kpss_result[1]],
+        'Critical Values': [', '.join([f'{k}: {v:.4f}' for k, v in kpss_result[3].items()])]
+    })
+
+    st.write('**Results of KPSS Test:**')
+    st.table(kpss_output)
+
     sns.set(style="darkgrid")
-    fig, axes = plt.subplots(3, 1, figsize=(10, 8), sharex=True)
+    fig, axes = plt.subplots(3, 1, figsize=(12, 10), sharex=True)
     axes[0].plot(df['ds'], df['y'], label='Original')
     axes[0].set_title('Time Series')
     plot_acf(df['y'], ax=axes[1])
@@ -152,6 +164,12 @@ def test_stationarity(df):
     plt.xlabel('Lags')
     plt.tight_layout()
     st.pyplot(fig)
+
+@st.cache_data(ttl="2h")
+def make_stationary(df, diff_order=1):
+    df['y_diff'] = df['y'].diff(periods=diff_order).dropna()
+    return df[['ds', 'y_diff']].dropna()
+    
 #---------------------------------------------------------------------------------------------------------------------------------
 ### Main App
 #---------------------------------------------------------------------------------------------------------------------------------
@@ -251,22 +269,25 @@ if data_source == "File Upload":
                 st.divider()
 
                 if Options == 'Plot data':
-                        try:
-                            line_chart = alt.Chart(df).mark_line().encode(x='ds:T', y="y:Q", tooltip=['ds:T', 'y']).properties(title="Time series preview").interactive()
-                            st.altair_chart(line_chart, use_container_width=True)
-                        except:
-                            st.line_chart(df['y'], use_container_width=True, height=300)
+                    try:
+                        line_chart = alt.Chart(df).mark_line().encode(x='ds:T', y="y:Q", tooltip=['ds:T', 'y']).properties(title="Time series preview").interactive()
+                        st.altair_chart(line_chart, use_container_width=True)
+                    except:
+                        st.line_chart(df['y'], use_container_width=True, height=300)
 
                 if Options == 'Show data':
-                        st.dataframe(df.head(), use_container_width=True)
+                    st.dataframe(df.head(), use_container_width=True)
 
                 if Options == 'Show Statistics':
-                        st.write(df.describe().T, use_container_width=True)
+                    st.write(df.describe().T, use_container_width=True)
+                    #skim_summary = skim(df)
+                    #st.write(skim_summary)
 
             #----------------------------------------
             with tab2:                
                 
                 Options_viz = st.radio('Options', ['Rolling Mean & Standard Deviation', 'Decomposition', 'Stationarity'], horizontal=True, label_visibility='collapsed', key='options_viz')
+                st.divider()
 
                 if Options_viz == 'Rolling Mean & Standard Deviation':
                     window_size = st.number_input("Window size for rolling statistics", min_value=2, max_value=30, value=12)
@@ -290,20 +311,35 @@ if data_source == "File Upload":
                     st.write("Fit the model on the data and generate future prediction.")
                     if st.checkbox("Initialize model (Fit)", key="fit"):
                         m = Prophet(seasonality_mode=seasonality,
-                                daily_seasonality=daily,
-                                weekly_seasonality=weekly,
-                                yearly_seasonality=yearly,
-                                growth=growth,
+                                #daily_seasonality=daily,
+                                #weekly_seasonality=weekly,
+                                #yearly_seasonality=yearly,
+                                #growth=growth,
                                 changepoint_prior_scale=changepoint_scale,
                                 seasonality_prior_scale=seasonality_scale)
                     
                         if holidays and selected_country != 'Country name':
                             m.add_country_holidays(country_name=country_code)
 
+                        if daily:
+                            m.add_seasonality(name='daily', period=1, fourier_order=5)
+                        if weekly:
+                            m.add_seasonality(name='weekly', period=7, fourier_order=5)
                         if monthly:
                             m.add_seasonality(name='monthly', period=30, fourier_order=5)
+                        if yearly:
+                            m.add_seasonality(name='yearly', period=365, fourier_order=5)
 
                         with st.spinner('Fitting the model...'):
+                            
+                            #adf_result = adfuller(df['y'].dropna())
+                            #kpss_result = kpss(df['y'].dropna(), regression='c')
+
+                            #if adf_result[1] > 0.05 and kpss_result[1] < 0.05:
+                                #st.warning('The time series is non-stationary. Differencing the data...')
+                                #df = make_stationary(df)
+                                #st.write(f"Data differenced to make it stationary with {len(df)} rows remaining.")
+
                             m.fit(df)
                             future = m.make_future_dataframe(periods=periods_input, freq='D')
                             if growth == 'logistic':
@@ -366,7 +402,7 @@ if data_source == "File Upload":
                         try:
                             with st.spinner("Cross validating..."):
                                             
-                                col1, col2 = st.columns(2)
+                                col1, col2 = st.columns((0.3,0.7))
                                                     
                                 with col1:
                                     df_cv = cross_validation(m, horizon=f"{horizon} days", parallel=None)
@@ -482,3 +518,18 @@ if data_source == "File Upload":
                     </ul>
                     </div>
                     """, unsafe_allow_html=True)
+
+
+#---------------------------------------------------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------------------------------------
+
+if data_source == "AWS S3":
+
+    st.title(f""":rainbow[Configuring - Something new will be coming up.. ]""")
+
+#---------------------------------------------------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------------------------------------
+
+if data_source == "Sharepoint":
+
+    st.title(f""":rainbow[Configuring - Something new will be coming up.. ]""")
