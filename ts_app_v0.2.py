@@ -359,6 +359,7 @@ if data_source == "File Upload":
 
                     with st.expander("**Forecast Horizon**"):
                         horizon = st.number_input('Enter forecast horizon in days:', min_value=1, max_value=365, value=30)
+                    st.divider()
 
                     st.subheader("Metrices", divider='blue')
                     if st.checkbox('Calculate metrics'):
@@ -383,7 +384,7 @@ if data_source == "File Upload":
                             st.error(f"Error during cross-validation: {e}")
 
                     st.subheader("Hyperparameter Tuning", divider='blue')
-                    st.write("Optimize hyperparameters to find the best combination.")
+                    st.write("Optimize hyperparameters to find the best combination. Due to iterative process it will take time.")
 
                     param_grid = {'changepoint_prior_scale': [0.001, 0.01, 0.1, 0.5],'seasonality_prior_scale': [0.01, 0.1, 1.0, 10.0],}
                     all_params = [dict(zip(param_grid.keys(), v)) for v in itertools.product(*param_grid.values())]
@@ -428,82 +429,56 @@ if data_source == "File Upload":
 
                 st.markdown("""
                     <style>
-                    .info-box {
-                        background-color: #f9f9f9;
-                        border-left: 6px solid #3498db;
-                        padding: 10px;
-                        margin-bottom: 10px;
-                        border-radius: 5px;
-                        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);}
-                    .info-box h3 {
-                        margin: 0;
-                        padding: 0;
-                        color: #3498db;
-                        font-weight: bold;
-                        }
-                    .info-box p {
-                        margin: 5px 0;
-                        color: #333;
-                        }
+                    .info-container {
+                    padding: 20px;
+                    background-color: #f9f9f9;
+                    border-left: 6px solid #3498db;
+                    border-radius: 5px;
+                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                    margin-bottom: 20px;
+                    }
+                    .info-container h3 {
+                    color: #3498db;
+                    font-weight: bold;
+                    margin-bottom: 10px;
+                    }
+                    .info-container p {
+                    color: #333;
+                    margin: 5px 0;
+                    }
+                    .info-container ul {
+                    list-style-type: none;
+                    padding: 0;
+                    }
+                    .info-container li {
+                    margin: 10px 0;
+                    display: flex;
+                    align-items: center;
+                    }
+                    .info-container li:before {
+                    content: "⭐";
+                    margin-right: 10px;
+                    color: #3498db;
+                    font-size: 1.2em;
+                    }
                     </style>
 
-                    <div class="info-box">
-                    <h3>📉 Rolling Mean & Standard Deviation</h3>
-                    <p>Analyze the time series' moving average and volatility over a specified window to understand trends and variability.</p>
-                    </div>
-
-                    <div class="info-box">
-                    <h3>📊 Decomposition</h3>
-                    <p>Break down the time series into trend, seasonality, and residual components to gain insights into its structure.</p>
-                    </div>
-
-                    <div class="info-box">
-                    <h3>🔍 ADF Test (Augmented Dickey-Fuller Test)</h3>
-                    <p>A statistical test used to check if a time series is stationary. The null hypothesis is that the series is non-stationary.</p>
-                    </div>
-
-                    <div class="info-box">
-                    <h3>🔬 KPSS Test (Kwiatkowski-Phillips-Schmidt-Shin Test)</h3>
-                    <p>Another test for stationarity. The null hypothesis is that the series is stationary, complementing the ADF test.</p>
-                    </div>
-
-                    <div class="info-box">
-                    <h3>🔄 Differencing</h3>
-                    <p>A technique to transform a non-stationary series into a stationary one by subtracting the previous observation from the current observation.</p>
-                    </div>
-
-                    <div class="info-box">
-                    <h3>📆 Seasonality Mode</h3>
-                    <p>Determines whether the seasonality component in the model is additive or multiplicative.</p>
-                    </div>
-
-                    <div class="info-box">
-                    <h3>📈 Changepoint Prior Scale</h3>
-                    <p>A hyperparameter that controls the flexibility of the trend in the Prophet model, affecting how much the trend can change at each changepoint.</p>
-                    </div>
-
-                    <div class="info-box">
-                    <h3>🌊 Seasonality Prior Scale</h3>
-                    <p>A hyperparameter that controls the flexibility of the seasonality in the Prophet model, impacting the seasonal component's amplitude.</p>
-                    </div>
-
-                    <div class="info-box">
-                    <h3>🔄 Cross-validation</h3>
-                    <p>A method to evaluate the model’s performance by dividing the dataset into multiple training and testing parts, ensuring the model's robustness.</p>
-                    </div>
-
-                    <div class="info-box">
-                    <h3>📉 MAPE (Mean Absolute Percentage Error)</h3>
-                    <p>A metric used to measure the accuracy of forecasted values as a percentage, providing an intuitive sense of forecast accuracy.</p>
-                    </div>
-
-                    <div class="info-box">
-                    <h3>🎉 Holidays</h3>
-                    <p>Incorporating holidays can improve the forecast by accounting for special events that impact the time series data.</p>
-                    </div>
-
-                    <div class="info-box">
-                    <h3>📈 Growth Models</h3>
-                    <p>Defines whether the time series follows a linear or logistic growth pattern. Logistic growth is used for series expected to plateau at a certain level.</p>
+                    <div class="info-container">
+                    <h3>🛠️ Definitions</h3>
+                    <p>Below are the important words and their definitions used in the app.</p>
+                    <ul>
+                    <li><strong>📉 Rolling Mean & Standard Deviation</strong> - Analyze the time series' moving average and volatility over a specified window to understand trends and variability.</li>
+                    <li><strong>📊 Decomposition</strong> - Break down the time series into trend, seasonality, and residual components to gain insights into its structure.</li>
+                    <li><strong>🔍 ADF Test (Augmented Dickey-Fuller Test)</strong> - A statistical test used to check if a time series is stationary. The null hypothesis is that the series is non-stationary.</li>
+                    <li><strong>🔬 KPSS Test (Kwiatkowski-Phillips-Schmidt-Shin Test)</strong> - Another test for stationarity. The null hypothesis is that the series is stationary, complementing the ADF test.</li>
+                    <li><strong>🔄 Differencing</strong> - A technique to transform a non-stationary series into a stationary one by subtracting the previous observation from the current observation.</li>    
+                    <li><strong>📆 Seasonality Mode</strong> - Determines whether the seasonality component in the model is additive or multiplicative.</li>
+                    <li><strong>📈 Changepoint Prior Scale</strong> - A hyperparameter that controls the flexibility of the trend in the Prophet model, affecting how much the trend can change at each changepoint.</li>
+                    <li><strong>🌊 Seasonality Prior Scale</strong> - A hyperparameter that controls the flexibility of the seasonality in the Prophet model, impacting the seasonal component's amplitude.</li>    
+                    <li><strong>🔄 Cross-validation</strong> - A method to evaluate the model’s performance by dividing the dataset into multiple training and testing parts, ensuring the model's robustness.</li>
+                    <li><strong>📉 MAPE (Mean Absolute Percentage Error)</strong> - A metric used to measure the accuracy of forecasted values as a percentage, providing an intuitive sense of forecast accuracy.</li>
+                    <li><strong>🎉 Holidays</strong> - Incorporating holidays can improve the forecast by accounting for special events that impact the time series data.</li>
+                    <li><strong>📈 Growth Models</strong> - Defines whether the time series follows a linear or logistic growth pattern. Logistic growth is used for series expected to plateau at a certain level.</li> 
+                    </ul>
                     </div>
                     """, unsafe_allow_html=True)
