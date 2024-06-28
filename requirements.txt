@@ -8,3 +8,4 @@ holidays==0.35
 pmdarima
 statsmodels
 seaborn
+skimpy
