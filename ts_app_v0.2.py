@@ -176,7 +176,7 @@ def make_stationary(df, diff_order=1):
 
 st.sidebar.header("Input", divider='blue')
 st.sidebar.info('Please choose from the following options to start the application.', icon="ℹ️")
-data_source = st.sidebar.radio("**:blue[Select the main source]**", ["File Upload", "AWS S3", "Sharepoint"],)
+data_source = st.sidebar.radio("**:blue[Select the main source]**", ["File Upload", "File Path"],)
 
 #---------------------------------------------------------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------------------------------------------------------
@@ -520,16 +520,4 @@ if data_source == "File Upload":
                     """, unsafe_allow_html=True)
 
 
-#---------------------------------------------------------------------------------------------------------------------------------
-#---------------------------------------------------------------------------------------------------------------------------------
 
-if data_source == "AWS S3":
-
-    st.title(f""":rainbow[Configuring - Something new will be coming up.. ]""")
-
-#---------------------------------------------------------------------------------------------------------------------------------
-#---------------------------------------------------------------------------------------------------------------------------------
-
-if data_source == "Sharepoint":
-
-    st.title(f""":rainbow[Configuring - Something new will be coming up.. ]""")
