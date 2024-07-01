@@ -38,7 +38,7 @@ from skimpy import skim
 #---------------------------------------------------------------------------------------------------------------------------------
 #image = Image.open('Image_Clariant.png')
 st.set_page_config(page_title="Forecasting App",
-                   page_icon='https://www.clariant.com/images/clariant-logo-small.svg',
+                   #page_icon=
                    layout="wide",
                    initial_sidebar_state="auto",)
 #st.sidebar.image(image, use_column_width='auto') 
