@@ -54,8 +54,9 @@ st.divider()
 
 #---------------------------------------------------------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------------------------------------------------------
-
-with st.sidebar.popover("**:blue[:pushpin: Knowledge Database]**", help="Click the options to get more knowledge"):    
+stats_expander = st.expander("**:blue[:pushpin: Knowledge Database]**", expanded=False)
+with stats_expander: 
+#with st.sidebar.popover("**:blue[:pushpin: Knowledge Database]**", help="Click the options to get more knowledge"):    
   st.markdown("""
             <style>
             .info-container {
