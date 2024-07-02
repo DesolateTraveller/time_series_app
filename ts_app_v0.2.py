@@ -305,7 +305,7 @@ if data_source == "File Upload":
 #----------------------------------------
 
         if not df.empty:
-            tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["**Information**", "**Visualization**", "**Forecast**", "**Validation & Tuning**", "**Result**", "**Definitions**"])
+            tab1, tab2, tab3, tab4, tab5 = st.tabs(["**Information**", "**Visualization**", "**Forecast**", "**Validation & Tuning**", "**Result**"])
             
             #----------------------------------------
             with tab1:
@@ -519,8 +519,7 @@ if data_source == "File Upload":
                                        file_name='Forecast_results.csv',
                                        mime='text/csv')
 
-            #---------------------------------------- 
-            with tab6:
+
 
                 
 
