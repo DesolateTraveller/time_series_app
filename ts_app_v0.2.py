@@ -237,17 +237,17 @@ def make_stationary(df, diff_order=1):
 
 st.sidebar.header("Input", divider='blue')
 st.sidebar.info('Please choose from the following options to start the application.', icon="ℹ️")
-data_source = st.sidebar.radio("**:blue[Select the main source]**", ["File Upload", "File Path"],)
+#data_source = st.sidebar.radio("**:blue[Select the main source]**", ["File Upload", "File Path"],)
 
 #---------------------------------------------------------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------------------------------------------------------
 
-if data_source == "File Upload":
-    file = st.sidebar.file_uploader("**:blue[Choose a file]**",
+#if data_source == "File Upload":
+file = st.sidebar.file_uploader("**:blue[Choose a file]**",
                                     type=["csv", "xls", "xlsx"], 
                                     accept_multiple_files=False, 
                                     key="file_upload")
-    if file:
+if file:
         df = load_file(file)
         st.sidebar.divider()
 
