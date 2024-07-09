@@ -50,72 +50,15 @@ st.info('**Disclaimer : :blue[Thank you for visiting the app] | This app is crea
 #----------------------------------------
 # Set the background image
 #----------------------------------------
-
-
-#---------------------------------------------------------------------------------------------------------------------------------
-#---------------------------------------------------------------------------------------------------------------------------------
-stats_expander = st.expander("**:blue[:pushpin: Knowledge Database]**", expanded=False)
-with stats_expander: 
-#with st.sidebar.popover("**:blue[:pushpin: Knowledge Database]**", help="Click the options to get more knowledge"):    
-  st.markdown("""
-            <style>
-            .info-container {
-            padding: 20px;
-            background-color: #f9f9f9;
-            border-left: 6px solid #3498db;
-            border-radius: 5px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
-            }
-            .info-container h3 {
-            color: #3498db;
-            font-weight: bold;
-            margin-bottom: 10px;
-            }
-            .info-container p {
-            color: #333;
-            margin: 5px 0;
-            }
-            .info-container ul {
-            list-style-type: none;
-            padding: 0;
-            }
-            .info-container li {
-            margin: 10px 0;
-            display: flex;
-            align-items: center;
-            }
-            .info-container li:before {
-            content: "⭐";
-            margin-right: 10px;
-            color: #3498db;
-            font-size: 1.2em;
-            }
-            </style>
-            <div class="info-container">
-            <h3>🛠️ Definitions</h3>
-            <p>Below are the important words and their definitions used in the app.</p>
-            <ul>
-            <li><strong>📉 Rolling Mean & Standard Deviation</strong> - Analyze the time series' moving average and volatility over a specified window to understand trends and variability.</li>
-            <li><strong>📊 Decomposition</strong> - Break down the time series into trend, seasonality, and residual components to gain insights into its structure.</li>
-            <li><strong>🔍 ADF Test (Augmented Dickey-Fuller Test)</strong> - A statistical test used to check if a time series is stationary. The null hypothesis is that the series is non-stationary.</li>
-            <li><strong>🔬 KPSS Test (Kwiatkowski-Phillips-Schmidt-Shin Test)</strong> - Another test for stationarity. The null hypothesis is that the series is stationary, complementing the ADF test.</li>
-            <li><strong>🔄 Differencing</strong> - A technique to transform a non-stationary series into a stationary one by subtracting the previous observation from the current observation.</li>    
-            <li><strong>📆 Seasonality Mode</strong> - Determines whether the seasonality component in the model is additive or multiplicative.</li>
-            <li><strong>📈 Changepoint Prior Scale</strong> - A hyperparameter that controls the flexibility of the trend in the Prophet model, affecting how much the trend can change at each changepoint.</li>
-            <li><strong>🌊 Seasonality Prior Scale</strong> - A hyperparameter that controls the flexibility of the seasonality in the Prophet model, impacting the seasonal component's amplitude.</li>    
-            <li><strong>🔄 Cross-validation</strong> - A method to evaluate the model’s performance by dividing the dataset into multiple training and testing parts, ensuring the model's robustness.</li>
-            <li><strong>📉 MAPE (Mean Absolute Percentage Error)</strong> - A metric used to measure the accuracy of forecasted values as a percentage, providing an intuitive sense of forecast accuracy.</li>
-            <li><strong>🎉 Holidays</strong> - Incorporating holidays can improve the forecast by accounting for special events that impact the time series data.</li>
-            <li><strong>📈 Growth Models</strong> - Defines whether the time series follows a linear or logistic growth pattern. Logistic growth is used for series expected to plateau at a certain level.</li> 
-            </ul>
-            </div>
-            """, unsafe_allow_html=True)
-
-st.divider()
 #---------------------------------------------------------------------------------------------------------------------------------
 ### Functions & Definitions
 #---------------------------------------------------------------------------------------------------------------------------------
+
+class SessionState:
+  def __init__(self):
+    self.clear_cache = False
+state = SessionState()
+
 @st.cache_data(ttl="2h")
 def load_file(file):
     file_extension = file.name.split('.')[-1]
@@ -133,7 +76,6 @@ def auto_detect_columns(df):
     date_col = None
     metric_col = None
     
-    # Detecting date columns
     for col in df.columns:
         if pd.api.types.is_datetime64_any_dtype(df[col]) or pd.api.types.is_timedelta64_dtype(df[col]):
             date_col = col
@@ -143,7 +85,6 @@ def auto_detect_columns(df):
             df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
             break
 
-    # Detecting metric columns
     for col in df.columns:
         if pd.api.types.is_numeric_dtype(df[col]):
             metric_col = col
@@ -213,7 +154,7 @@ def test_stationarity(df):
         'Critical Values': [', '.join([f'{k}: {v:.4f}' for k, v in kpss_result[3].items()])]
     })
 
-    st.write('**Results of KPSS Test:**')
+    st.write('**Results of KPSS (Kwiatkowski-Phillips-Schmidt-Shin) Test:**')
     st.table(kpss_output)
 
     sns.set(style="darkgrid")
@@ -227,47 +168,126 @@ def test_stationarity(df):
     st.pyplot(fig)
 
 @st.cache_data(ttl="2h")
-def make_stationary(df, diff_order=1):
+def make_stationary(df, diff_order):
     df['y_diff'] = df['y'].diff(periods=diff_order).dropna()
     return df[['ds', 'y_diff']].dropna()
-    
+
+@st.cache_data(ttl="2h")
+def plot_data(df):
+    line_chart = alt.Chart(df).mark_line().encode(x='ds:T', y='y:Q', tooltip=['ds:T', 'y']).interactive()
+    st.altair_chart(line_chart, use_container_width=True)
+
 #---------------------------------------------------------------------------------------------------------------------------------
 ### Main App
 #---------------------------------------------------------------------------------------------------------------------------------
 
 st.sidebar.header("Input", divider='blue')
 st.sidebar.info('Please choose from the following options to start the application.', icon="ℹ️")
-#data_source = st.sidebar.radio("**:blue[Select the main source]**", ["File Upload", "File Path"],)
+data_source = st.sidebar.radio("**:blue[Select the main source]**", ["File Upload", "AWS S3", "Sharepoint"],)
 
 #---------------------------------------------------------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------------------------------------------------------
 
-#if data_source == "File Upload":
-file = st.sidebar.file_uploader("**:blue[Choose a file]**",
+stats_expander = st.expander("**:blue[:pushpin: Knowledge Database]**", expanded=False)
+with stats_expander: 
+
+                    st.markdown("""
+                    <style>
+                    .info-container {
+                    padding: 20px;
+                    background-color: #f9f9f9;
+                    border-left: 6px solid #3498db;
+                    border-radius: 5px;
+                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                    margin-bottom: 20px;
+                    }
+                    .info-container h3 {
+                    color: #3498db;
+                    font-weight: bold;
+                    margin-bottom: 10px;
+                    }
+                    .info-container p {
+                    color: #333;
+                    margin: 5px 0;
+                    }
+                    .info-container ul {
+                    list-style-type: none;
+                    padding: 0;
+                    }
+                    .info-container li {
+                    margin: 10px 0;
+                    display: flex;
+                    align-items: center;
+                    }
+                    .info-container li:before {
+                    content: "⭐";
+                    margin-right: 10px;
+                    color: #3498db;
+                    font-size: 1.2em;
+                    }
+                    </style>
+
+                    <div class="info-container">
+                    <h3>🛠️ Definitions</h3>
+                    <p>Below are the important words and their definitions used in the app.</p>
+                    <ul>
+                    <li><strong>📉 Rolling Mean & Standard Deviation</strong> - Analyze the time series' moving average and volatility over a specified window to understand trends and variability.</li>
+                    <li><strong>📊 Decomposition</strong> - Break down the time series into trend, seasonality, and residual components to gain insights into its structure.</li>
+                    <li><strong>🔍 ADF Test (Augmented Dickey-Fuller Test)</strong> - A statistical test used to check if a time series is stationary. The null hypothesis is that the series is non-stationary.</li>
+                    <li><strong>🔬 KPSS Test (Kwiatkowski-Phillips-Schmidt-Shin Test)</strong> - Another test for stationarity. The null hypothesis is that the series is stationary, complementing the ADF test.</li>
+                    <li><strong>🔄 Differencing</strong> - A technique to transform a non-stationary series into a stationary one by subtracting the previous observation from the current observation.</li>    
+                    <li><strong>📆 Seasonality Mode</strong> - Determines whether the seasonality component in the model is additive or multiplicative.</li>
+                    <li><strong>📈 Changepoint Prior Scale</strong> - A hyperparameter that controls the flexibility of the trend in the Prophet model, affecting how much the trend can change at each changepoint.</li>
+                    <li><strong>🌊 Seasonality Prior Scale</strong> - A hyperparameter that controls the flexibility of the seasonality in the Prophet model, impacting the seasonal component's amplitude.</li>    
+                    <li><strong>🔄 Cross-validation</strong> - A method to evaluate the model’s performance by dividing the dataset into multiple training and testing parts, ensuring the model's robustness.</li>
+                    <li><strong>📉 MAPE (Mean Absolute Percentage Error)</strong> - A metric used to measure the accuracy of forecasted values as a percentage, providing an intuitive sense of forecast accuracy.</li>
+                    <li><strong>🎉 Holidays</strong> - Incorporating holidays can improve the forecast by accounting for special events that impact the time series data.</li>
+                    <li><strong>📈 Growth Models</strong> - Defines whether the time series follows a linear or logistic growth pattern. Logistic growth is used for series expected to plateau at a certain level.</li> 
+                    </ul>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+st.divider()
+
+#---------------------------------------------------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------------------------------------
+
+if data_source == "File Upload":
+    file = st.sidebar.file_uploader("**:blue[Choose a file]**",
                                     type=["csv", "xls", "xlsx"], 
                                     accept_multiple_files=False, 
                                     key="file_upload")
-if file:
+    if file:
         df = load_file(file)
         st.sidebar.divider()
 
 #----------------------------------------
-        
+
         col1, col2, col3, col4, col5, col6 = st.columns(6)
 
         with col1:
-            with st.expander("**Horizon**"):     
+            with st.expander("**Horizon**"):         
+
                 periods_input = st.number_input('Select how many future periods (days) to forecast.', min_value=1, max_value=366, value=90)
 
+                initial = st.number_input(value=365,label="initial",min_value=30,max_value=1096)
+                initial = str(initial) + " days"
+
+                period = st.number_input(value=90,label="period",min_value=1,max_value=365)
+                period = str(period) + " days"
+
+                horizon = st.number_input(value=90,label="horizon",min_value=30,max_value=366)
+                horizon = str(horizon) + " days"
+
         with col2:
-            with st.expander("**Trend**"):
+            with st.expander("**Trend**"):     
                 daily = st.checkbox("Daily")
                 weekly = st.checkbox("Weekly")
                 monthly = st.checkbox("Monthly")
                 yearly = st.checkbox("Yearly")
 
         with col3:
-            with st.expander("**Seasonality**"):
+            with st.expander("**Seasonality**"):    
                 seasonality = st.radio(label='Seasonality', options=['additive', 'multiplicative'])
 
         with col4:
@@ -296,20 +316,29 @@ if file:
                 if selected_country:
                     country_code = selected_country[:2]
                     holidays = st.checkbox(f'Add {selected_country} holidays to the model')
-        
+
         with col6:
-            with st.expander('**Hyperparameters**'):
+            with st.expander('**Hyperparameters**'):       
                 changepoint_scale = st.select_slider(label='Changepoint prior scale', options=[0.001, 0.01, 0.1, 0.5], value=0.1)
                 seasonality_scale = st.select_slider(label='Seasonality prior scale', options=[0.01, 0.1, 1.0, 10.0], value=1.0)
 
-        st.divider()
+#--------------------------------------------------------------------------------------------------------------------------------
 
-#----------------------------------------
+        stats_expander = st.expander("**Preview of Data**", expanded=False)
+        with stats_expander:  
+                st.table(df.head(2))
+        st.divider()
+#--------------------------------------------------------------------------------------------------------------------------------
 
         if not df.empty:
-            tab1, tab2, tab3, tab4, tab5 = st.tabs(["**Information**", "**Visualization**", "**Forecast**", "**Validation & Tuning**", "**Result**"])
+            tab1, tab2, tab3, tab4, tab5 = st.tabs(["**Information**", 
+                                                    "**Visualization**",
+                                                    "**Forecast**",
+                                                    "**Validation**", 
+                                                    "**Result**",
+                                                    ])
             
-            #----------------------------------------
+            #---------------------------------------------------------------------------------------------------------------------
             with tab1:
 
                 date_col, metric_col = auto_detect_columns(df)
@@ -326,52 +355,64 @@ if file:
                 df = prep_data(df, date_col, metric_col)
                 st.divider()
 
-                Options = st.radio('Options', ['Plot data', 'Show data', 'Show Statistics'], horizontal=True, label_visibility='collapsed', key='options')
-                st.divider()
+                try:
+                    line_chart = alt.Chart(df).mark_line().encode(x='ds:T', y="y:Q", tooltip=['ds:T', 'y']).properties(title="Input preview").interactive()
+                    st.altair_chart(line_chart, use_container_width=True)
+                except:
+                    st.line_chart(df['y'], use_container_width=True, height=300)
 
-                if Options == 'Plot data':
-                    try:
-                        line_chart = alt.Chart(df).mark_line().encode(x='ds:T', y="y:Q", tooltip=['ds:T', 'y']).properties(title="Time series preview").interactive()
-                        st.altair_chart(line_chart, use_container_width=True)
-                    except:
-                        st.line_chart(df['y'], use_container_width=True, height=300)
+                st.write(df.describe().T, use_container_width=True)
 
-                if Options == 'Show data':
-                    st.dataframe(df.head(), use_container_width=True)
-
-                if Options == 'Show Statistics':
-                    st.write(df.describe().T, use_container_width=True)
-                    #skim_summary = skim(df)
-                    #st.write(skim_summary)
-
-            #----------------------------------------
+            #---------------------------------------------------------------------------------------------------------------------
             with tab2:                
                 
-                Options_viz = st.radio('Options', ['Rolling Mean & Standard Deviation', 'Decomposition', 'Stationarity'], horizontal=True, label_visibility='collapsed', key='options_viz')
+                options_viz = st.radio('Options', ['Visualization','Rolling Mean & Standard Deviation', 'Decomposition', 'Stationarity',], 
+                                       horizontal=True, label_visibility='collapsed', key='options_viz')
                 st.divider()
 
-                if Options_viz == 'Rolling Mean & Standard Deviation':
+                if options_viz == 'Visualization':
+                    plot_option = st.selectbox("**Choose Plot**", ["Line Chart", "Histogram", "Scatter Plot"])
+
+                    if plot_option == "Line Chart":
+                        plot_data(df)
+                    #----------------------------------------
+                    elif plot_option == "Histogram":
+                        fig = px.histogram(df, x='y', nbins=50)
+                        st.plotly_chart(fig)
+                    #----------------------------------------
+                    elif plot_option == "Scatter Plot":
+                        col1, col2 = st.columns((0.2,0.8))
+                        with col1:
+                            scatter_x = st.selectbox("X-axis", df.columns, index=0)
+                            scatter_y = st.selectbox("Y-axis", df.columns, index=1)
+                        with col2:                        
+                            fig = px.scatter(df, x=scatter_x, y=scatter_y, trendline="ols")
+                            st.plotly_chart(fig)
+                #----------------------------------------
+                if options_viz == 'Rolling Mean & Standard Deviation':
                     window_size = st.number_input("Window size for rolling statistics", min_value=2, max_value=30, value=12)
                     plot_rolling_statistics(df.copy(), window=window_size)
                     st.divider()
-
-                if Options_viz == 'Decomposition':
+                #----------------------------------------
+                if options_viz == 'Decomposition':
                     period = st.number_input("Period for decomposition (days)", min_value=2, max_value=365, value=30)
                     decompose_series(df.copy(), model='additive', period=period)
                     st.divider()
-
-                if Options_viz == 'Stationarity':
+                #----------------------------------------
+                if options_viz == 'Stationarity':
+                    st.write('**If adf_result[1] > 0.05 and kpss_result[1] < 0.05,the series is non-stationary, we need to differencing the data to make it stationary**')
                     test_stationarity(df.copy())
                     st.divider()
 
-            #---------------------------------------- 
+            #--------------------------------------------------------------------------------------------------------------------- 
             with tab3:
 
                 with st.container():
 
-                    st.write("Fit the model on the data and generate future prediction.")
+                    st.write("Choose the below mentioned model-algorithm, Fit the model on the data and Generate future prediction.")
+
                     if st.checkbox("Initialize model (Fit)", key="fit"):
-                        m = Prophet(seasonality_mode=seasonality,
+                            m = Prophet(seasonality_mode=seasonality,
                                 #daily_seasonality=daily,
                                 #weekly_seasonality=weekly,
                                 #yearly_seasonality=yearly,
@@ -379,84 +420,81 @@ if file:
                                 changepoint_prior_scale=changepoint_scale,
                                 seasonality_prior_scale=seasonality_scale)
                     
-                        if holidays and selected_country != 'Country name':
-                            m.add_country_holidays(country_name=country_code)
+                            if holidays and selected_country != 'Country name':
+                                m.add_country_holidays(country_name=country_code)
 
-                        if daily:
-                            m.add_seasonality(name='daily', period=1, fourier_order=5)
-                        if weekly:
-                            m.add_seasonality(name='weekly', period=7, fourier_order=5)
-                        if monthly:
-                            m.add_seasonality(name='monthly', period=30, fourier_order=5)
-                        if yearly:
-                            m.add_seasonality(name='yearly', period=365, fourier_order=5)
+                            if daily:
+                                m.add_seasonality(name='daily', period=1, fourier_order=5)
+                            if weekly:
+                                m.add_seasonality(name='weekly', period=7, fourier_order=5)
+                            if monthly:
+                                m.add_seasonality(name='monthly', period=30, fourier_order=5)
+                            if yearly:
+                                m.add_seasonality(name='yearly', period=365, fourier_order=5)
 
-                        with st.spinner('Fitting the model...'):
-                            
-                            #adf_result = adfuller(df['y'].dropna())
-                            #kpss_result = kpss(df['y'].dropna(), regression='c')
+                            with st.spinner('Fitting the model...'):
+                                
+                                adf_result = adfuller(df['y'].dropna())
+                                kpss_result = kpss(df['y'].dropna(), regression='c')
 
-                            #if adf_result[1] > 0.05 and kpss_result[1] < 0.05:
-                                #st.warning('The time series is non-stationary. Differencing the data...')
-                                #df = make_stationary(df)
-                                #st.write(f"Data differenced to make it stationary with {len(df)} rows remaining.")
+                                if adf_result[1] > 0.05 and kpss_result[1] < 0.05:
+                                    st.warning('The time series is non-stationary. Differencing the data...')
+                                    diff_order = st.slider('Differencing Order', min_value=1, max_value=5, value=1)
+                                    df = make_stationary(df, diff_order)
+                                    st.write(f"Data differenced to make it stationary with {len(df)} rows remaining.")
 
-                            m.fit(df)
-                            future = m.make_future_dataframe(periods=periods_input, freq='D')
-                            if growth == 'logistic':
-                                future['cap'] = cap
-                                future['floor'] = floor
+                                m.fit(df)
+                                future = m.make_future_dataframe(periods=periods_input, freq='D')
+                                if growth == 'logistic':
+                                    future['cap'] = cap
+                                    future['floor'] = floor
 
-                            st.caption(f"The model will produce forecast up to {future['ds'].max()}")
-                            st.success('Model fitted successfully')
-                        st.divider()
+                                st.caption(f"The model will produce forecast up to {future['ds'].max()}")
+                                st.success('Model fitted successfully')
+                            st.divider()
 
                     if st.checkbox("Generate forecast (Predict)", key="predict"):
-                        try:
-                            with st.spinner("Forecasting..."):
-                                forecast = m.predict(future)
-                                st.success('Prediction generated successfully')
-                                df_fut = st.dataframe(forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']], use_container_width=True)
-                                #st.table(df_fut)
+                            try:
+                                with st.spinner("Forecasting..."):
+                                    forecast = m.predict(future)
+                                    st.success('Prediction generated successfully')
+                                    df_fut = st.dataframe(forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']], use_container_width=True)
+                                    #st.table(df_fut)
 
-                                col1, col2 = st.columns(2)
+                                    col1, col2 = st.columns(2)
 
-                                with col1:
-                                    fig1 = m.plot(forecast)
-                                    st.write('**Forecast plot**')
-                                    st.pyplot(fig1)
+                                    with col1:
+                                        fig1 = m.plot(forecast)
+                                        st.write('**Forecast plot**')
+                                        st.pyplot(fig1)
 
-                                with col2:
-                                    if growth == 'linear':
-                                        fig2 = m.plot(forecast)
-                                        add_changepoints_to_plot(fig2.gca(), m, forecast)
-                                        st.write('**Growth plot**')
-                                        st.pyplot(fig2)
+                                    with col2:
+                                        if growth == 'linear':
+                                            fig2 = m.plot(forecast)
+                                            add_changepoints_to_plot(fig2.gca(), m, forecast)
+                                            st.write('**Growth plot**')
+                                            st.pyplot(fig2)
 
-                        except Exception as e:
-                            st.warning(f"Error generating forecast: {e}")
-                        st.divider()
+                            except Exception as e:
+                                st.warning(f"Error generating forecast: {e}")
+                            st.divider()
 
                     if st.checkbox('Show components'):
-                        try:
-                            with st.spinner("Loading..."):
-                                fig3 = m.plot_components(forecast)
-                                st.pyplot(fig3)
-                                #plot_components_plotly(m, forecast)
+                            try:
+                                with st.spinner("Loading..."):
+                                    fig3 = m.plot_components(forecast)
+                                    st.pyplot(fig3)
+                                    #plot_components_plotly(m, forecast)
 
-                        except Exception as e:
-                            st.warning(f"Error showing components: {e}")
+                            except Exception as e:
+                                st.warning(f"Error showing components: {e}")
 
-            #---------------------------------------- 
+            #--------------------------------------------------------------------------------------------------------------------- 
             with tab4:
 
                 with st.container():
 
                     st.write("In this section, you can perform cross-validation of the model")
-
-                    with st.expander("**Forecast Horizon**"):
-                        horizon = st.number_input('Enter forecast horizon in days:', min_value=1, max_value=365, value=30)
-                    st.divider()
 
                     st.subheader("Metrices", divider='blue')
                     if st.checkbox('Calculate metrics'):
@@ -466,8 +504,8 @@ if file:
                                 col1, col2 = st.columns((0.3,0.7))
                                                     
                                 with col1:
-                                    df_cv = cross_validation(m, horizon=f"{horizon} days", parallel=None)
-                                    df_p = performance_metrics(df_cv)
+                                    df_cv = cross_validation(m, initial=initial,period=period,horizon=horizon,parallel="processes")                                         
+                                    df_p = performance_metrics(df_cv,rolling_window=1)
                                     st.dataframe(df_p)
 
                                 with col2:
@@ -488,11 +526,11 @@ if file:
                     mapes = []
 
                     if st.button("Optimize hyperparameters"):
-                        try:
-                            with st.spinner("Finding best combination..."):
+                        with st.spinner("Finding best combination. Please wait.."):
+                            try:
                                 for params in all_params:
                                     m = Prophet(**params).fit(df)
-                                    df_cv = cross_validation(m, horizon=f"{horizon} days", parallel=None)
+                                    df_cv = cross_validation(m,initial=initial,period=period,horizon=horizon,parallel="processes")
                                     df_p = performance_metrics(df_cv, rolling_window=1)
                                     mapes.append(df_p['mape'].values[0])
 
@@ -504,26 +542,47 @@ if file:
                                 st.write('The best parameter combination is:')
                                 st.write(best_params)
 
-                        except Exception as e:
-                            st.error(f"Error during hyperparameter optimization: {e}")
+                            except Exception as e:
+                                st.error(f"Error during hyperparameter optimization: {e}")
 
-            #---------------------------------------- 
+            #--------------------------------------------------------------------------------------------------------------------- 
             with tab5:
 
                 st.write("Export your forecast results.")
+
                 if 'forecast' in locals():
-                    forecast_df = pd.DataFrame(forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']])
-                    forecast_data = forecast_df.to_csv(index=False)
+                        forecast_df = pd.DataFrame(forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']])
+                        forecast_data = forecast_df.to_csv(index=False)
 
-                    st.dataframe(forecast_df, use_container_width=True)
-                    st.download_button(label="Download Forecast CSV",
-                                       data=forecast_data,
-                                       file_name='Forecast_results.csv',
-                                       mime='text/csv')
+                        st.dataframe(forecast_df, use_container_width=True)
+                        st.download_button(label="📥 Download Forecast CSV",data=forecast_data,file_name='Forecast_results.csv',mime='text/csv')
 
+                        if st.button("Export model metrics (.csv)"):
+                            try:
+                                forecast_df = forecast_df.to_csv(decimal=',')
+                                b64 = base64.b64encode(df_p.encode()).decode()
+                                href = f'<a href="data:file/csv;base64,{b64}">Download CSV File</a> (click derecho > guardar como **metrics.csv**)'
+                                st.markdown(href, unsafe_allow_html=True)
+                            except:
+                                st.write("No metrics to export")
 
+                        if st.button('Save model configuration (.json) in memory'):
+                            with open('serialized_model.json', 'w') as fout:
+                                json.dump(model_to_json(m), fout)
 
-                
+                        if st.button('Clear cache memory please'):
+                            state.clear_cache = True
+#---------------------------------------------------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------------------------------------
 
+if data_source == "AWS S3":
 
+    st.title(f""":rainbow[Configuring - Something new will be coming up.. ]""")
+
+#---------------------------------------------------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------------------------------------
+
+if data_source == "Sharepoint":
+
+    st.title(f""":rainbow[Configuring - Something new will be coming up.. ]""")
 
