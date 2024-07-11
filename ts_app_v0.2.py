@@ -179,6 +179,12 @@ def plot_data(df):
     line_chart = alt.Chart(df).mark_line().encode(x='ds:T', y='y:Q', tooltip=['ds:T', 'y']).interactive()
     st.altair_chart(line_chart, use_container_width=True)
 
+@st.cache_data(ttl="2h")
+def handle_numerical_missing_values(data, numerical_strategy):
+    imputer = SimpleImputer(strategy=numerical_strategy)
+    numerical_features = data.select_dtypes(include=['number']).columns
+    data[numerical_features] = imputer.fit_transform(data[numerical_features])
+    return data
 #---------------------------------------------------------------------------------------------------------------------------------
 ### Main App
 #---------------------------------------------------------------------------------------------------------------------------------
