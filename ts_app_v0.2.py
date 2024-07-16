@@ -300,11 +300,11 @@ st.divider()
 #---------------------------------------------------------------------------------------------------------------------------------
 
 #if data_source == "File Upload":
-  file = st.sidebar.file_uploader("**:blue[Choose a file]**",
+file = st.sidebar.file_uploader("**:blue[Choose a file]**",
                                     type=["csv", "xls", "xlsx"], 
                                     accept_multiple_files=False, 
                                     key="file_upload")
-  if file:
+if file:
         df = load_file(file)
         st.sidebar.divider()
 
