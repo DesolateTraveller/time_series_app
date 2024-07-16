@@ -219,8 +219,8 @@ def create_lstm_model(train_data, n_features, epochs=100, batch_size=32):
 ### Main App
 #---------------------------------------------------------------------------------------------------------------------------------
 
-#st.sidebar.header("Input", divider='blue')
-#st.sidebar.info('Please choose from the following options to start the application.', icon="ℹ️")
+st.sidebar.header("Input", divider='blue')
+st.sidebar.info('Please choose from the following options to start the application.', icon="ℹ️")
 #data_source = st.sidebar.radio("**:blue[Select the main source]**", ["File Upload", "AWS S3", "Sharepoint"],)
 
 #---------------------------------------------------------------------------------------------------------------------------------
