@@ -9,3 +9,5 @@ pmdarima
 statsmodels
 seaborn
 skimpy
+tensorflow
+keras
