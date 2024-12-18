@@ -75,7 +75,7 @@ if page == "Introduction" :
     Use the dropdown menu in the sidebar to access different sections:
     </p>
     <ul style="color: #4B4B4B;">
-        <li><strong>Introduction:</strong> Understand the project overview and get started with the app.</li>
+        <li><strong>Introduction:</strong> Understand the overview and get started with the app.</li>
         <li><strong>Analysis:</strong> Upload your data and explore step-by-step analytical tools.</li>
     </ul>
     </div>
