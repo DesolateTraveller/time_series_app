@@ -148,6 +148,7 @@ if page == "Introduction" :
 elif page == "Analysis":
     #st.sidebar.header(":blue[Application]", divider='blue')
     st.sidebar.divider()
+    st.divider()
 
     file = st.sidebar.file_uploader("**:blue[Choose a file]**",
                                     type=["csv", "xls", "xlsx"], 
