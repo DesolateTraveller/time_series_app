@@ -56,6 +56,20 @@ st.sidebar.markdown(
 #---------------------------------------------------------------------------------------------------------------------------------
 ### Functions & Definitions
 #---------------------------------------------------------------------------------------------------------------------------------
+
+@st.cache_data(ttl="2h")
+def load_file(file):
+    file_extension = file.name.split('.')[-1]
+    if file_extension == 'csv':
+        df = pd.read_csv(file, sep=None, engine='python', encoding='utf-8', parse_dates=True, infer_datetime_format=True)
+    elif file_extension in ['xls', 'xlsx']:
+        df = pd.read_excel(file)
+    else:
+        st.error("Unsupported file format")
+        df = pd.DataFrame()
+    return df
+
+
 #---------------------------------------------------------------------------------------------------------------------------------
 ### Main app
 #---------------------------------------------------------------------------------------------------------------------------------
@@ -134,3 +148,17 @@ if page == "Introduction" :
 elif page == "Analysis":
     #st.sidebar.header(":blue[Application]", divider='blue')
     st.sidebar.divider()
+
+    file = st.sidebar.file_uploader("**:blue[Choose a file]**",
+                                    type=["csv", "xls", "xlsx"], 
+                                    accept_multiple_files=False, 
+                                    key="file_upload")
+    if file is not None:
+        df = load_file(file)        #for filter
+        df1 = df.copy()             #for analysis
+        df2 = df.copy()             #for visualization
+
+        st.sidebar.divider()
+
+        target_variable = st.selectbox("**:blue[Target Variable]**", options=["None"] + list(df.columns), key="target_variable")
+        time_col = st.selectbox("**:blue[Time Frame Column]**", options=["None"] + list(df.columns), key="time_col")
