@@ -32,3 +32,76 @@ st.title(f""":rainbow[Time Series Forecasting]""")
 #---------------------------------------------------------------------------------------------------------------------------------
 
 page = st.sidebar.selectbox("**:blue[Contents]**", ["Introduction", "Analysis"])
+
+#---------------------------------------------------------------------------------------------------------------------------------
+if page == "Introduction" :
+
+    #st.divider()
+    stats_expander = st.expander("**:red[Description]**", expanded=True)
+    with stats_expander: 
+
+        st.info("""
+        xx
+        """)
+
+    stats_expander = st.expander("**:red[Steps to Use the App]**", expanded=False)
+    with stats_expander: 
+
+        st.info("""
+                
+            1. ***Upload Your Data:***
+            - xx.
+            - xx.
+    
+            2. ***Select Custom Range:***
+            - xx.
+            - xx.
+            - xx.
+            - xx.                
+            - xx.
+
+            3. ***Run the Analysis & Download Results:***
+            - xx.               
+            - xx.
+         
+            """)
+        
+    #st.divider()
+    #---------------------------------------------------------------
+    st.markdown("""
+    <div style="background-color: #F0F8FF; padding: 10px; border-radius: 10px;">
+    <h4 style="color: #6495ed;">How to Navigate:</h4>
+    <p style="color: #4B4B4B;">
+    Use the dropdown menu in the sidebar to access different sections:
+    </p>
+    <ul style="color: #4B4B4B;">
+        <li><strong>Introduction:</strong> Understand the project overview and get started with the app.</li>
+        <li><strong>Analysis:</strong> Upload your data and explore step-by-step analytical tools.</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
+    #---------------------------------------------------------------
+
+    #---------------------------------------------------------------
+    st.sidebar.empty()
+    st.sidebar.markdown("""
+    <div style="background-color: #F9F9FB; padding: 10px; border-radius: 8px; margin-top: 20px; box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);">    
+        <h5 style="color: #0056b3; font-weight: bold;">What's New</h5>
+        <ul style="color: #333333; padding-left: 15px; margin: 10px 0;">
+            <li><b>Version:</b> 0.1</li>
+        </ul>
+    </div>
+    """, unsafe_allow_html=True)
+    #---------------------------------------------------------------
+    st.markdown("---")
+    stats_expander = st.expander("**:red[Note]**", expanded=True)
+    with stats_expander:
+
+        st.markdown("""
+            **Need Help?** If you encounter any issues or have feedback, please contact the **Owner of the App** mentioned in the footer.
+            """)
+        
+#---------------------------------------------------------------------------------------------------------------------------------
+elif page == "Analysis":
+    #st.sidebar.header(":blue[Application]", divider='blue')
+    st.sidebar.divider()
