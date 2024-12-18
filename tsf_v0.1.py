@@ -161,5 +161,12 @@ elif page == "Analysis":
 
         st.sidebar.divider()
 
-        target_variable = st.selectbox("**:blue[Target Variable]**", options=["None"] + list(df.columns), key="target_variable")
-        time_col = st.selectbox("**:blue[Time Frame Column]**", options=["None"] + list(df.columns), key="time_col")
+        target_variable = st.sidebar.selectbox("**:blue[Target Variable]**", options=["None"] + list(df.columns), key="target_variable")
+        time_col = st.sidebar.selectbox("**:blue[Time Frame Column]**", options=["None"] + list(df.columns), key="time_col")
+        if time_col == "None" or target_variable == "None" :
+            st.warning("Please choose **target variable**, **time-frame column** to proceed with the analysis.")
+        
+        else:
+            stats_expander = st.expander("**Preview of Data**", expanded=True)
+            with stats_expander:  
+                st.table(df.head(2))
