@@ -25,7 +25,7 @@ st.markdown(
     <style>
     .title {
         text-align: center;
-        font-size: 40px;
+        font-size: 80px;
         font-weight: bold;
         background: linear-gradient(to left, red, orange, blue, indigo, violet);
         -webkit-background-clip: text;
