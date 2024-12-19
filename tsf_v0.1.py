@@ -210,12 +210,12 @@ elif page == "Analysis":
             tab1, tab2, tab3 = st.tabs([ "**Visualization**","**Performance**", "**Forecast**"])
             #--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-            df2 = df2.set_index(time_col, inplace=True)  
+            #df2 = df2.set_index(time_col, inplace=True)  
 
             with tab1:
                 
                 plt.figure(figsize=(25,5))
-                plt.plot(df2, label='Target', color='blue')
+                plt.plot(df2.index, df2.values, label='Target', color='blue')
                 plt.xlabel('Time')
                 plt.ylabel('Target')
                 plt.title('Time vs Target')
