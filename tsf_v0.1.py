@@ -188,7 +188,7 @@ elif page == "Analysis":
                 st.table(df.head(2))
 
             #with st.sidebar.popover("**:blue[:hammer_and_wrench: Criteria & Hyperparameters]**", help="Check the criteria & Tune the hyperparameters whenever required"):  
-            stats_expander = st.expander("**Criteria & Hyperparameters**", expanded=True)
+            stats_expander = st.sidebar.expander("**Criteria & Hyperparameters**", expanded=False)
             with stats_expander: 
                 train_size_per = st.slider("**Train Size (as %)**", 10, 90, 70, 5)
                 test_size_per = st.slider("**Test Size (as %)**", 10, 50, 30, 5)  
