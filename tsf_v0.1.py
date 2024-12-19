@@ -37,7 +37,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 #----------------------------------------
-st.sidebar.markdown(
+st.markdown(
     """
     <style>
     .footer {
