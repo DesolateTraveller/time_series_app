@@ -25,14 +25,14 @@ st.markdown(
     <style>
     .title {
         text-align: center;
-        font-size: 50px;
+        font-size: 40px;
         font-weight: bold;
         background: linear-gradient(to left, red, orange, blue, indigo, violet);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
     }
     </style>
-    <div class="title">Forecasting</div>
+    <div class="title">Time Series Forecasting</div>
     """,
     unsafe_allow_html=True
 )
