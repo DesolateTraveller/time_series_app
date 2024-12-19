@@ -25,7 +25,7 @@ st.markdown(
     <style>
     .title {
         text-align: center;
-        font-size: 40px;
+        font-size: 80px;
         font-weight: bold;
         background: linear-gradient(to left, red, orange, blue, indigo, violet);
         -webkit-background-clip: text;
@@ -186,3 +186,21 @@ elif page == "Analysis":
             stats_expander = st.expander("**Preview of Data**", expanded=True)
             with stats_expander:  
                 st.table(df.head(2))
+
+
+            with st.sidebar.popover("**:blue[:hammer_and_wrench: Criteria & Hyperparameters]**", help="Check the criteria & Tune the hyperparameters whenever required"):  
+                train_size_per = st.slider("**Train Size (as %)**", 10, 90, 70, 5)
+                test_size_per = st.slider("**Test Size (as %)**", 10, 50, 30, 5)  
+                st.divider()
+                alpha = st.slider('**Alpha (Smoothing Parameter)**', min_value=0.01, max_value=1.0, value=0.2,key = 'ses_1')
+                beta = st.slider('**Beta (Trend Smoothing Parameter)**', min_value=0.01, max_value=1.0, value=0.2,key = 'ses_2')
+                gamma = st.slider('**Gamma (Seasonality Smoothing Parameter)**', min_value=0.01, max_value=1.0, value=0.2,key = 'ses_3') 
+                st.divider()
+                order_arima = st.text_input('**ARIMA Order (p,d,q)**:', '1,1,1')
+                order_arima = tuple(map(int, order_arima.split(',')))     
+                order_sarima = st.text_input('**SARIMA Order (p,d,q,m)**:', '1,1,1,12')
+                order_sarima = tuple(map(int, order_sarima.split(',')))                                                                                             
+                st.divider()
+                forecast_periods = st.slider('**Forecasting periods**', min_value=30, max_value=90, value=60, key='for_ped') 
+                        
+            st.sidebar.divider()
