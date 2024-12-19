@@ -13,13 +13,29 @@ import matplotlib.pyplot as plt
 #---------------------------------------------------------------------------------------------------------------------------------
 ### Title and description for your Streamlit app
 #---------------------------------------------------------------------------------------------------------------------------------
-st.set_page_config(page_title="Time Series Forecasting | v0.1",
+st.set_page_config(page_title="Forecasting | v0.1",
                    #page_icon='https://www.clariant.com/images/clariant-logo-small.svg',
                    page_icon= '📈',
                    layout="wide",
                    initial_sidebar_state="auto",)
 #---------------------------------------
-st.title(f""":rainbow[Time Series Forecasting]""")
+#st.title(f""":rainbow[Time Series Forecasting]""")
+st.markdown(
+    """
+    <style>
+    .title {
+        text-align: center;
+        font-size: 40px;
+        font-weight: bold;
+        background: linear-gradient(to left, red, orange, blue, indigo, violet);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    </style>
+    <div class="title">Forecasting</div>
+    """,
+    unsafe_allow_html=True
+)
 #----------------------------------------
 st.sidebar.markdown(
     """
