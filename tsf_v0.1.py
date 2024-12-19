@@ -213,7 +213,7 @@ elif page == "Analysis":
             with tab1:
                 
                 plt.figure(figsize=(25,5))
-                plt.plot(df2, label='Target', color='blue')
+                plt.plot(df, label='Target', color='blue')
                 plt.xlabel('Time')
                 plt.ylabel('Target')
                 plt.title('Time vs Target')
