@@ -11,3 +11,4 @@ seaborn
 skimpy
 tensorflow
 keras
+ruptures
