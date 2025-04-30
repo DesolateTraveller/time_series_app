@@ -31,7 +31,7 @@ from sklearn.metrics import mean_absolute_percentage_error as mape
 #----------------------------------------
 import ruptures as rpt
 import time
-from darts.models import ExponentialSmoothing, ARIMA, AutoARIMA, RNNModel, Prophet
+#from darts.models import ExponentialSmoothing, ARIMA, AutoARIMA, RNNModel, Prophet
 #---------------------------------------------------------------------------------------------------------------------------------
 ### Title for your Streamlit app
 #---------------------------------------------------------------------------------------------------------------------------------
