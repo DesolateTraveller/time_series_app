@@ -10,32 +10,84 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 #----------------------------------------
+# Forecast
+from statsmodels.tsa.stattools import adfuller, kpss
+from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
+from statsmodels.graphics.gofplots import qqplot
+from scipy.signal import periodogram
+from statsmodels.tsa.seasonal import seasonal_decompose
+from statsmodels.tsa.holtwinters import ExponentialSmoothing
+from statsmodels.tsa.arima.model import ARIMA
+from pmdarima import auto_arima
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from sklearn.linear_model import Ridge, Lasso, HuberRegressor, ElasticNet, LinearRegression
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from datetime import datetime, timedelta
+#from fbprophet import Prophet
+#from tensorflow.keras.models import Sequential
+#from tensorflow.keras.layers import LSTM, Dense, Dropout
+from statsmodels.tsa.statespace.sarimax import SARIMAX
+from sklearn.metrics import mean_absolute_percentage_error as mape
+#----------------------------------------
+import ruptures as rpt
+import time
+from darts.models import ExponentialSmoothing, ARIMA, AutoARIMA, RNNModel, Prophet
 #---------------------------------------------------------------------------------------------------------------------------------
-### Title and description for your Streamlit app
+### Title for your Streamlit app
 #---------------------------------------------------------------------------------------------------------------------------------
 st.set_page_config(page_title="Forecasting | v0.1",
-                   #page_icon='https://www.clariant.com/images/clariant-logo-small.svg',
-                   page_icon= '📈',
-                   layout="wide",
-                   initial_sidebar_state="auto",)
-#---------------------------------------
-#st.title(f""":rainbow[Time Series Forecasting]""")
+                    layout="wide",
+                    page_icon="📈",            
+                    initial_sidebar_state="collapsed")
+
+#---------------------------------------------------------------------------------------------------------------------------------
+### CSS
+#---------------------------------------------------------------------------------------------------------------------------------
+st.markdown("""
+    <style>
+    .centered-info {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-weight: bold;
+        font-size: 15px;
+        color: #007BFF; 
+        background-color: #FFFFFF; 
+        border-radius: 5px;
+        border: 1px solid #007BFF;
+        margin: 0px;
+        padding: 5px 10px;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+#---------------------------------------------------------------------------------------------------------------------------------
+### Description for your Streamlit app
+#---------------------------------------------------------------------------------------------------------------------------------
 st.markdown(
     """
     <style>
-    .title {
+    .title-large {
         text-align: center;
-        font-size: 40px;
+        font-size: 35px;
         font-weight: bold;
         background: linear-gradient(to left, red, orange, blue, indigo, violet);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
     }
+    .title-small {
+        text-align: center;
+        font-size: 20px;
+        background: linear-gradient(to left, red, orange, blue, indigo, violet);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
     </style>
-    <div class="title">Time Series Forecasting</div>
+    <div class="title-large">Forecasting</div>
+    <div class="title-small">Version : 0.1</div>
     """,
-    unsafe_allow_html=True
-)
+    unsafe_allow_html=True)
+
 #----------------------------------------
 st.markdown(
     """
@@ -62,13 +114,11 @@ st.markdown(
     </style>
 
     <div class="footer">
-        <p>© 2024 | Created by : <span class="highlight">Avijit Chakraborty</span> | Prepared by: <a href="mailto:avijit.mba18@gmail.com">Avijit Chakraborty</a></p> <span class="highlight">Thank you for visiting the app | Unauthorized uses or copying is strictly prohibited | For best view of the app, please zoom out the browser to 75%.</span>
+        <p>© 2025 | Created by : <span class="highlight">Avijit Chakraborty</span> | <a href="mailto:avijit.mba18@gmail.com"> 📩 </a></p> <span class="highlight">Thank you for visiting the app | Unauthorized uses or copying is strictly prohibited | For best view of the app, please zoom out the browser to 75%.</span>
     </div>
     """,
     unsafe_allow_html=True)
-#---------------------------------------------------------------------------------------------------------------------------------
-### knowledge 
-#---------------------------------------------------------------------------------------------------------------------------------
+
 #---------------------------------------------------------------------------------------------------------------------------------
 ### Functions & Definitions
 #---------------------------------------------------------------------------------------------------------------------------------
@@ -85,140 +135,39 @@ def load_file(file):
         df = pd.DataFrame()
     return df
 
+@st.cache_data(ttl="2h")
+def adf_test(series):
+    result = adfuller(series, autolag='AIC')
+    return {
+            "Test Statistic": result[0],
+            "p-value": result[1],
+            "Lags Used": result[2],
+            "Number of Observations": result[3],
+            "Critical Values": result[4],
+            "Stationary": result[1] <= 0.05  # p-value <= 0.05 indicates stationarity
+    }
 
+@st.cache_data(ttl="2h")
+def kpss_test(series):
+    result, p_value, lags, critical_values = kpss(series, regression='c')
+    return {
+            "Test Statistic": result,
+            "p-value": p_value,
+            "Critical Values": critical_values,
+            "Stationary": p_value > 0.05  # p-value > 0.05 indicates stationarity
+    }
+
+def calculate_metrics(y_true, y_pred):
+    mae = mean_absolute_error(y_true, y_pred)
+    mse = mean_squared_error(y_true, y_pred)
+    rmse = np.sqrt(mse)
+    r2 = r2_score(y_true, y_pred)
+    #rmsle = np.sqrt(mean_squared_log_error(y_true, y_pred)) if np.all(y_pred > 0) else None
+    #mape_value = mape(y_true, y_pred)
+    #return mae, mse, rmse, r2, rmsle, mape_value
+    return mae, mse, rmse, r2
 #---------------------------------------------------------------------------------------------------------------------------------
 ### Main app
 #---------------------------------------------------------------------------------------------------------------------------------
 
-page = st.sidebar.selectbox("**:blue[Contents]**", ["Introduction", "Analysis"])
-
-#---------------------------------------------------------------------------------------------------------------------------------
-if page == "Introduction" :
-
-    #st.divider()
-    stats_expander = st.expander("**:red[Description]**", expanded=True)
-    with stats_expander: 
-
-        st.info("""
-        xx
-        """)
-
-    stats_expander = st.expander("**:red[Steps to Use the App]**", expanded=False)
-    with stats_expander: 
-
-        st.info("""
-                
-            1. ***Upload Your Data:***
-            - xx.
-            - xx.
-    
-            2. ***Select Custom Range:***
-            - xx.
-            - xx.
-            - xx.
-            - xx.                
-            - xx.
-
-            3. ***Run the Analysis & Download Results:***
-            - xx.               
-            - xx.
-         
-            """)
-        
-    #st.divider()
-    #---------------------------------------------------------------
-    st.markdown("""
-    <div style="background-color: #F0F8FF; padding: 10px; border-radius: 10px;">
-    <h4 style="color: #6495ed;">How to Navigate:</h4>
-    <p style="color: #4B4B4B;">
-    Use the dropdown menu in the sidebar to access different sections:
-    </p>
-    <ul style="color: #4B4B4B;">
-        <li><strong>Introduction:</strong> Understand the project overview and get started with the app.</li>
-        <li><strong>Analysis:</strong> Upload your data and explore step-by-step analytical tools.</li>
-    </ul>
-    </div>
-    """, unsafe_allow_html=True)
-    #---------------------------------------------------------------
-
-    #---------------------------------------------------------------
-    st.sidebar.empty()
-    st.sidebar.markdown("""
-    <div style="background-color: #F9F9FB; padding: 10px; border-radius: 8px; margin-top: 20px; box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);">    
-        <h5 style="color: #0056b3; font-weight: bold;">What's New</h5>
-        <ul style="color: #333333; padding-left: 15px; margin: 10px 0;">
-            <li><b>Version:</b> 0.1</li>
-        </ul>
-    </div>
-    """, unsafe_allow_html=True)
-    #---------------------------------------------------------------
-    st.markdown("---")
-    stats_expander = st.expander("**:red[Note]**", expanded=True)
-    with stats_expander:
-
-        st.markdown("""
-            **Need Help?** If you encounter any issues or have feedback, please contact the **Owner of the App** mentioned in the footer.
-            """)
-        
-#---------------------------------------------------------------------------------------------------------------------------------
-elif page == "Analysis":
-    #st.sidebar.header(":blue[Application]", divider='blue')
-    st.sidebar.divider()
-    st.divider()
-
-    file = st.sidebar.file_uploader("**:blue[Choose a file]**",
-                                    type=["csv", "xls", "xlsx"], 
-                                    accept_multiple_files=False, 
-                                    key="file_upload")
-    if file is not None:
-        df = load_file(file)        #for filter
-        df1 = df.copy()             #for analysis
-        df2 = df.copy()             #for visualization
-
-        st.sidebar.divider()
-
-        target_variable = st.sidebar.selectbox("**:blue[Target Variable]**", options=["None"] + list(df.columns), key="target_variable")
-        time_col = st.sidebar.selectbox("**:blue[Time Frame Column]**", options=["None"] + list(df.columns), key="time_col")
-        if time_col == "None" or target_variable == "None" :
-            st.warning("Please choose **target variable**, **time-frame column** to proceed with the analysis.")
-        
-        else:
-            stats_expander = st.expander("**Preview of Data**", expanded=True)
-            with stats_expander:  
-                st.table(df.head(2))
-
-            #with st.sidebar.popover("**:blue[:hammer_and_wrench: Criteria & Hyperparameters]**", help="Check the criteria & Tune the hyperparameters whenever required"):  
-            stats_expander = st.sidebar.expander("**Criteria & Hyperparameters**", expanded=False)
-            with stats_expander: 
-                train_size_per = st.slider("**Train Size (as %)**", 10, 90, 70, 5)
-                test_size_per = st.slider("**Test Size (as %)**", 10, 50, 30, 5)  
-                st.divider()
-                alpha = st.slider('**Alpha (Smoothing Parameter)**', min_value=0.01, max_value=1.0, value=0.2,key = 'ses_1')
-                beta = st.slider('**Beta (Trend Smoothing Parameter)**', min_value=0.01, max_value=1.0, value=0.2,key = 'ses_2')
-                gamma = st.slider('**Gamma (Seasonality Smoothing Parameter)**', min_value=0.01, max_value=1.0, value=0.2,key = 'ses_3') 
-                st.divider()
-                order_arima = st.text_input('**ARIMA Order (p,d,q)**:', '1,1,1')
-                order_arima = tuple(map(int, order_arima.split(',')))     
-                order_sarima = st.text_input('**SARIMA Order (p,d,q,m)**:', '1,1,1,12')
-                order_sarima = tuple(map(int, order_sarima.split(',')))                                                                                             
-                st.divider()
-                forecast_periods = st.slider('**Forecasting periods**', min_value=30, max_value=90, value=60, key='for_ped') 
-                        
-            st.sidebar.divider()
-
-            #--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-            tab1, tab2, tab3 = st.tabs([ "**Visualization**","**Performance**", "**Forecast**"])
-            #--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-            #df2 = df2.set_index(time_col, inplace=True)  
-
-            with tab1:
-                
-                plt.figure(figsize=(25,5))
-                plt.plot(df2.index, df2.values, label='Target', color='blue')
-                plt.xlabel('Time')
-                plt.ylabel('Target')
-                plt.title('Time vs Target')
-                plt.legend()
-                plt.grid(True)
-                st.pyplot(plt,use_container_width=True)
+st.divider()
