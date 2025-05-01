@@ -29,7 +29,7 @@ from datetime import datetime, timedelta
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from sklearn.metrics import mean_absolute_percentage_error as mape
 #----------------------------------------
-import ruptures as rpt
+#import ruptures as rpt
 import time
 #from darts.models import ExponentialSmoothing, ARIMA, AutoARIMA, RNNModel, Prophet
 #---------------------------------------------------------------------------------------------------------------------------------
