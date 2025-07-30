@@ -12,4 +12,4 @@ skimpy
 tensorflow
 keras
 ruptures
-xgb
+xgboost
