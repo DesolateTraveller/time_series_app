@@ -13,17 +13,21 @@ import matplotlib.dates as mdates
 import matplotlib.ticker as ticker
 from matplotlib.ticker import FuncFormatter
 #----------------------------------------
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+#----------------------------------------
 from datetime import datetime, timedelta
 #----------------------------------------
 from sklearn.model_selection import train_test_split
 #----------------------------------------
 # Forecast
+from scipy import stats
 from statsmodels.tsa.stattools import adfuller, kpss, acf, pacf
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 from statsmodels.graphics.gofplots import qqplot
 from scipy.signal import periodogram
 from statsmodels.tsa.seasonal import seasonal_decompose
-from statsmodels.tsa.holtwinters import ExponentialSmoothing
+from statsmodels.tsa.holtwinters import ExponentialSmoothing, SimpleExpSmoothing
 from statsmodels.tsa.arima.model import ARIMA
 from pmdarima import auto_arima
 from statsmodels.tsa.ar_model import AutoReg
@@ -34,18 +38,15 @@ from sklearn.linear_model import Ridge, Lasso, HuberRegressor, ElasticNet, Linea
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from xgboost import XGBRegressor
 #----------------------------------------
-#from fbprophet import Prophet
-#from tensorflow.keras.models import Sequential
-#from tensorflow.keras.layers import LSTM, Dense, Dropout
-#from prophet import Prophet
-#from keras.models import Sequential
-#from keras.layers import LSTM, GRU, Dense
-#from keras.preprocessing.sequence import TimeseriesGenerator
+from prophet import Prophet
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM as KerasLSTM, Dense
+from tensorflow.keras.optimizers import Adam
 #----------------------------------------
-from tsf_func import load_file, adf_test, kpss_test, test_stationarity, first_spike
-from tsf_func import calculate_metrics
-from tsf_func import check_missing_values, check_outliers, handle_categorical_missing_values, handle_numerical_missing_values
-from tsf_func import invert_transforms
+import warnings
+warnings.filterwarnings("ignore")
+#----------------------------------------
+from tsf_func import load_file
 #---------------------------------------------------------------------------------------------------------------------------------
 ### Title for your Streamlit app
 #---------------------------------------------------------------------------------------------------------------------------------
@@ -53,7 +54,6 @@ st.set_page_config(page_title="Forecasting | v1.0",
                     layout="wide",
                     page_icon="📈",            
                     initial_sidebar_state="collapsed")
-
 #---------------------------------------------------------------------------------------------------------------------------------
 ### CSS
 #---------------------------------------------------------------------------------------------------------------------------------
@@ -131,46 +131,154 @@ st.markdown(
 #---------------------------------------------------------------------------------------------------------------------------------
 ### Functions & Definitions
 #---------------------------------------------------------------------------------------------------------------------------------
+def evaluate(pred, true):
+    mae = mean_absolute_error(true, pred)
+    mse = mean_squared_error(true, pred)
+    rmse = np.sqrt(mse)
+    mape = np.mean(np.abs((true - pred) / (true + 1e-8))) * 100
+    r2 = r2_score(true, pred)
+    return mae, mse, rmse, mape, r2
 
+def color_objective(val):
+    color = "#d1ecf1" if val == "Maximize" else "#f8d7da"
+    return f"background-color: {color}; color: #004c6d;" if val == "Maximize" else f"background-color: {color}; color: #721c24;"
 
 #---------------------------------------------------------------------------------------------------------------------------------
 ### Main app
 #---------------------------------------------------------------------------------------------------------------------------------
-
-#Sst.divider()
-
+if 'models_pred' not in st.session_state:
+    st.session_state.models_pred = None
+if 'error_df' not in st.session_state:
+    st.session_state.error_df = None
+if 'y_test' not in st.session_state:
+    st.session_state.y_test = None
+if 'test_dates' not in st.session_state:
+    st.session_state.test_dates = None
+if 'df_processed' not in st.session_state:
+    st.session_state.df_processed = None
+if 'transformations' not in st.session_state:
+    st.session_state.transformations = []
+#----------------------------------------
+    
 col1, col2 = st.columns((0.15,0.85))
 with col1:           
     with st.container(border=True):
 
-        file = st.file_uploader("**:blue[Choose a file]**",type=["csv", "xls", "xlsx"], accept_multiple_files=False,key="file_upload")
-        if file is not None:
-                st.success("Data loaded successfully!")
-                df = load_file(file)        #for filter
-                
-                st.divider()
-                
-                target_variable = st.selectbox("**:blue[Target Variable]**", options=["None"] + list(df.columns), key="target_variable")
-                time_col = st.selectbox("**:blue[Time Frame Column]**", options=["None"] + list(df.columns), key="time_col")
-                forecast_periods = st.slider('**:blue[Forecasting periods]**', min_value=30, max_value=90, value=60, key='for_ped') 
+        uploaded_file = st.file_uploader("**:blue[Choose a file]**",type=["csv", "xls", "xlsx"], accept_multiple_files=False,key="file_upload")
+        if not uploaded_file:
+            st.info("Please upload a CSV file to begin.")
+            st.stop()
         
-                st.divider()
+        if uploaded_file is not None:
+            st.success("Data loaded successfully!")
+            df = load_file(uploaded_file)        #for filter
                 
-                add_lags = st.checkbox("**:blue[Add Lagged Features?]**", value=False)
-                if add_lags:
-                    num_lags = st.number_input("**:blue[Number of Lags]**", min_value=1, max_value=30, value=3)
-                    
-                if time_col == "None" or target_variable == "None" :
-                    st.warning("Please choose **target variable**, **time-frame column** to proceed with the analysis.")
+            st.divider()
+            ts_type = st.radio("**Time Series Type**", ["Univariate", "Multivariate"],horizontal=True)
+
+    with st.container(border=True):
         
+        time_col = st.selectbox("**Select Time Column**", df.columns.tolist())
+        try:
+            df[time_col] = pd.to_datetime(df[time_col],errors='coerce')
+        except Exception as e:
+            st.error("Time column parsing failed.")
+            st.stop()
+            
+        target_col = st.selectbox("**Target Variable**", [c for c in df.columns if c != time_col])
+        feature_cols = [target_col]
+        if ts_type == "Multivariate":
+            feature_cols = st.multiselect("**Feature Variable**", [c for c in df.columns if c != time_col], default=[target_col])
+            
+    with st.expander('**⚙️ Preprocessing Options**'):
+        
+        apply_resample = st.checkbox("Apply Resampling")
+        if apply_resample:
+            with st.expander("Resampling"):
+                freq_map = {'D': 'Daily', 'W': 'Weekly', 'M': 'Monthly', 'Q': 'Quarterly', 'Y': 'Yearly'}
+                selected_freq = st.selectbox("**Resample Frequency**", list(freq_map.keys()), format_func=lambda x: freq_map[x])
+        else:
+            selected_freq = None
+
+        apply_log = st.checkbox("Apply Log Transform")
+        log_col_name = None
+        if apply_log:
+             with st.expander("Log Transform"):
+                if (df[target_col] <= 0).any():
+                    st.warning("Log transform not possible: non-positive values.")
                 else:
-                    st.warning("Tune or Change the **Hyperparameters**(tab shown in the top) whenever required.")   
-                    with col2:
-                                            
-                        with st.popover("**:blue[:hammer_and_wrench: Hyperparameters]**",disabled=False, use_container_width=True):  
+                    log_col_name = f"{target_col}_log"
+
+        apply_fourier = st.checkbox("Add Fourier Terms (Multiple Seasonalities)")
+        if apply_fourier:
+             with st.expander("Fourier Terms"):
+                period1 = st.number_input("**Seasonal Period 1**", min_value=2, value=7)
+                period2 = st.number_input("**Seasonal Period 2**", min_value=2, value=365)
+                num_terms = st.slider("**Fourier Pairs**", 1, 10, 3)
+        else:
+            period1 = period2 = num_terms = None
+            
+    with st.container(border=True):
+        
+        forecast_steps = st.slider("**Forecast Steps (days)**", 1, 365, 30)
+        #run_forecast = st.button("**▶️ Run Forecasting**")
+
+#----------------------------------------
+with col2:             
+    # Initialize session state
+    if 'df_processed' not in st.session_state or st.session_state.get('uploaded_file') != uploaded_file.name:
+        st.session_state['df_processed'] = df.copy()
+        st.session_state['transformations'] = []
+        st.session_state['uploaded_file'] = uploaded_file.name
+
+    #if run_forecast:
+        df_temp = df.copy()
+        transformations = []
+
+        if apply_resample and selected_freq:
+            try:
+                df_temp = df_temp.set_index(time_col).resample(selected_freq).mean(numeric_only=True).reset_index()
+                transformations.append("Resampled")
+            except:
+                st.sidebar.error("Resampling failed.")
+
+        # Log transform
+        if apply_log and log_col_name:
+            df_temp[log_col_name] = np.log(df_temp[target_col])
+            target_col = log_col_name
+            transformations.append("Log Transform")
+
+        # Fourier terms
+        if apply_fourier:
+            for i in range(1, num_terms + 1):
+                for period in [period1, period2]:
+                    omega = 2 * np.pi * i / period
+                    df_temp[f'sin_{period}_{i}'] = np.sin(omega * np.arange(len(df_temp)))
+                    df_temp[f'cos_{period}_{i}'] = np.cos(omega * np.arange(len(df_temp)))
+                    feature_cols.extend([f'sin_{period}_{i}', f'cos_{period}_{i}'])
+            transformations.append("Fourier Terms")
+
+        st.session_state['df_processed'] = df_temp
+        st.session_state['target_col'] = target_col
+        st.session_state['feature_cols'] = feature_cols
+        st.session_state['transformations'] = transformations
+
+        if transformations:
+            st.info("✅ Applied: " + ", ".join(transformations))
+    #else:
+        #st.info("Click **▶️ Run Forecasting** to start.")
+        #st.stop()
+
+    df = st.session_state['df_processed']
+    target_col = st.session_state['target_col']
+    feature_cols = st.session_state['feature_cols']
+
+    with st.popover("**:blue[:hammer_and_wrench: Hyperparameters]**",disabled=False, use_container_width=True):  
 
                             subcol1, subcol2, subcol3, subcol4, subcol5 = st.columns(5)
-                            with subcol1:                            
+                            with subcol1: 
+                                decom_model_type = st.selectbox("**Model type for decomposition**", ["additive", "multiplicative", ])
+                                st.divider()                           
                                 numerical_strategies = ['mean', 'median', 'most_frequent', 'ffill', 'interpolate']
                                 categorical_strategies = ['constant','most_frequent']
                                 selected_numerical_strategy = st.selectbox("**Missing value treatment : Numerical**", numerical_strategies)
@@ -201,11 +309,26 @@ with col1:
                                     alpha = st.slider('**Alpha (Smoothing Parameter)**', min_value=0.01, max_value=1.0, value=0.2,key = 'ses_1')
                                     beta = st.slider('**Beta (Trend Smoothing Parameter)**', min_value=0.01, max_value=1.0, value=0.2,key = 'ses_2')
                                     gamma = st.slider('**Gamma (Seasonality Smoothing Parameter)**', min_value=0.01, max_value=1.0, value=0.2,key = 'ses_3') 
-                                st.divider()    
-                                order_arima = st.text_input('**ARIMA Order (p,d,q)**:', '1,1,1')
-                                order_arima = tuple(map(int, order_arima.split(',')))     
-                                order_sarima = st.text_input('**SARIMA Order (p,d,q,m)**:', '1,1,1,12')
-                                order_sarima = tuple(map(int, order_sarima.split(',')))                                                                                             
+                                st.divider()  
+                                  
+                                #order_arima = st.text_input('**ARIMA Order (p,d,q)**:', '1,1,1')
+                                #order_arima = tuple(map(int, order_arima.split(',')))     
+                                #order_sarima = st.text_input('**SARIMA Order (p,d,q,m)**:', '1,1,1,12')
+                                #order_sarima = tuple(map(int, order_sarima.split(',')))    
+                                
+                                with st.expander("**Tune ARIMA**"):
+                                        arima_p = st.slider("**ARIMA p (max)**", 0, 5, 2)
+                                        arima_d = st.slider("**ARIMA d (max)**", 0, 3, 2)
+                                        arima_q = st.slider("**ARIMA q (max)**", 0, 5, 2)
+
+                                with st.expander("**Tune Prophet**"):
+                                        changepoint_prior = st.slider("**Prophet: Changepoint Prior**", 0.001, 1.0, 0.05, 0.01)
+                                        seasonality_prior = st.slider("**Seasonality Prior**", 0.01, 10.0, 1.0, 0.1)
+                                        seasonality_mode = st.selectbox("**Seasonality Mode**", ["additive", "multiplicative"])
+
+                                with st.expander("**Tune Random Forest & XGBoost**"):
+                                        n_estimators = st.slider("**n_estimators**", 50, 200, 100)
+                                        max_depth = st.slider("**max_depth**", 3, 10, 5)
 
                             with subcol5:
                                 selected_metric = st.selectbox("🔍 Select Error Metric to Find Best Model", ["MAE", "MSE", "RMSE", "MAPE"])
@@ -213,534 +336,470 @@ with col1:
                                 model = st.selectbox("**Select Model**", ["l2", "l1", "rbf"], index=0)
                                 algo_name = st.selectbox("**Select Algorithm**", ["Binary Segmentation", "Pelt", "Window", "Bottom-Up"], index=0)
                                 num_change_points = st.slider("**Number of Change Points**", min_value=1, max_value=20, value=3)                    
-
-                        #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-                        tabs = st.tabs(["**📊 Overview**","**📈 Visualizations**","**🔧 Preprocessing**","**✅ Checks**","**⚖️ Comparison**","**📈 Graph**","**📋 Results**","**🎲 Forecast**", "**⚠︎ Drift**"])
-                        #--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-            
-                        with tabs[0]:
-                            
-                            unwanted_substrings = ['unnamed', '0', 'nan', 'deleted']
-                            cols_to_delete = [col for col in df.columns if any(sub in col.lower() for sub in unwanted_substrings)]
-                            if cols_to_delete:
-                                st.warning(f"🗑️ {len(cols_to_delete)} column(s) deleted. | **Showing Top 3 rows for reference.**")
-                            else:
-                                st.info("✅ No unwanted columns found. Nothing deleted after importing. | **Showing Top 3 rows for reference.**")
-                            df= df.drop(columns=cols_to_delete)
-            
-                            df[time_col] = pd.to_datetime(df[time_col], errors='coerce') 
-                            if add_lags:
-                                for lag in range(1, num_lags + 1):
-                                    df[f'{target_variable}_lag_{lag}'] = df[target_variable].shift(lag) 
-                            
-                            st.dataframe(df.head(3))     
-                              
-                            df.dropna(subset=[time_col], inplace=True) 
-                            df.sort_values(by=time_col, inplace=True)
-                            df.reset_index(drop=True, inplace=True) 
-                    
-                            df1 = df.copy()             #for analysis
-                            df2 = df.copy()             #for visualization
-                            
-                            df1.set_index(time_col, inplace=True)
-                            df2.set_index(time_col, inplace=True)
-                                                        
-                            with st.container(border=True):
-                                    
-                                df_describe_table = df.describe(include='all').T.reset_index().rename(columns={'index': 'Feature'})
-                                st.markdown("##### 📊 Descriptive Statistics")
-                                st.dataframe(df_describe_table)                    
-
-                            col1, col2 = st.columns((0.85,0.15))
-                            with col1: 
-                                with st.container(border=True):
-
-                                    if not pd.api.types.is_datetime64_any_dtype(df[time_col]):
-                                        df[time_col] = pd.to_datetime(df[time_col], errors='coerce')
-                                    df.dropna(subset=[time_col], inplace=True)  
-                                    df.sort_values(by=time_col, inplace=True)
-                                    fig, ax = plt.subplots(figsize=(16,4))
-                                    ax.plot(df[time_col], df[target_variable], label='Sales', color='blue')
-                                    ax.set_title(f"{target_variable} over {time_col}", fontsize=10)
-                                    ax.set_xlabel(time_col)
-                                    ax.set_ylabel(target_variable)
-                                    ax.legend()
-                                    ax.grid(True)
-                                    plt.tight_layout()
-                                    st.pyplot(fig, use_container_width=True)                          
-
-                            with col2:                                
-                                with st.container(border=True):
-                                    
-                                    decomposition = seasonal_decompose(df2[target_variable], model='additive', period=freq_guess)                                
     
-                                    remarks = []
-                                    if decomposition.trend.dropna().std() > 0.5:
-                                        remarks.append("🔹 Strong **trend** detected.")
-                                    else:
-                                        remarks.append("🔹 Weak or no significant trend.")
+    #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    tabs = st.tabs(["**📊 Overview**","**📈 Visualizations**","**🔧 Preprocessing**","**✅ Checks**","**⚖️ Comparison**","**📈 Graph**","**🎲 Forecast**", "**⚠︎ Drift**"])
+    #--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-                                    if decomposition.seasonal.dropna().std() > 0.5:
-                                        remarks.append("🔹 Clear **seasonality** present.")
-                                    else:
-                                        remarks.append("🔹 Little to no seasonality detected.")
+    with tabs[0]:
+        
+        st.dataframe(df.head(3)) 
+        
+        with st.container(border=True):
+                                    
+            df_describe_table = df.describe(include='all').T.reset_index().rename(columns={'index': 'Feature'})
+            st.markdown("##### 📊 Descriptive Statistics")
+            st.dataframe(df_describe_table) 
+            
+        col1, col2 = st.columns((0.85,0.15))
+        with col1: 
+            with st.container(border=True):
 
-                                    if decomposition.resid.dropna().std() < 0.2:
-                                        remarks.append("🔹 Residuals show **low variance** — good model fit.")
-                                    else:
-                                        remarks.append("🔹 Residuals are **noisy** — may need model tuning.")
+                if not pd.api.types.is_datetime64_any_dtype(df[time_col]):
+                    df[time_col] = pd.to_datetime(df[time_col], errors='coerce')
+                df.dropna(subset=[time_col], inplace=True)  
+                df.sort_values(by=time_col, inplace=True)
+                fig, ax = plt.subplots(figsize=(16,4))
+                ax.plot(df[time_col], df[target_col], label='Sales', color='blue')
+                ax.set_title(f"{target_col} over {time_col}", fontsize=10)
+                ax.set_xlabel(time_col)
+                ax.set_ylabel(target_col)
+                ax.legend()
+                ax.grid(True)
+                plt.tight_layout()
+                st.pyplot(fig, use_container_width=True)                         
 
-                                    st.markdown("##### 📌 Intial Remarks:")
-                                    for remark in remarks:
-                                        st.markdown(remark)  
-                                                                     
-                        with tabs[1]:
-                            
-                            cat_vars = df.select_dtypes(include=['object', 'category']).columns.tolist()
-                            num_vars = df.select_dtypes(include=['number']).columns.tolist()
-                            
-                            with st.container(border=True):
+        with col2:                                
+            with st.container(border=True):
+                                    
+                    decomposition = seasonal_decompose(df[target_col], model='additive', period=12)                                
+                    remarks = []
+                    if decomposition.trend.dropna().std() > 0.5:
+                        remarks.append("🔹 Strong **trend** detected.")
+                    else:
+                        remarks.append("🔹 Weak or no significant trend.")
+                    if decomposition.seasonal.dropna().std() > 0.5:
+                        remarks.append("🔹 Clear **seasonality** present.")
+                    else:
+                        remarks.append("🔹 Little to no seasonality detected.")
+                    if decomposition.resid.dropna().std() < 0.2:
+                        remarks.append("🔹 Residuals show **low variance** — good model fit.")
+                    else:
+                        remarks.append("🔹 Residuals are **noisy** — may need model tuning.")
+                    st.markdown("##### 📌 Intial Remarks:")
+                    for remark in remarks:
+                        st.markdown(remark) 
+                        
+    with tabs[1]:
+        
+            with st.container(border=True):
                                 
-                                if cat_vars:
-                                    st.success(f"**📋 Categorical Variables Found: {len(cat_vars)}**")
-                                else:
-                                    st.warning("**⚠️ No categorical variables found.**")
-
-                                if cat_vars:
-                                    for i in range(0, len(cat_vars), 3):
-                                        cols = st.columns(3)
-                                        for j, col_name in enumerate(cat_vars[i:i+3]):
-                                            with cols[j]:
-                                                fig, ax = plt.subplots(figsize=(4, 3))
-                                                df[col_name].value_counts().plot(kind='bar', ax=ax, color='skyblue')
-                                                ax.set_title(f"{col_name}", fontsize=10)
-                                                ax.set_ylabel("Count", fontsize=9)
-                                                ax.set_xlabel("")
-                                                ax.tick_params(axis='x', rotation=45, labelsize=8)
-                                                ax.tick_params(axis='y', labelsize=8)
-                                                st.pyplot(fig,use_container_width=True)
-
-                            with st.container(border=True):
-
-                                if num_vars:
-                                    st.success(f"**📈 Numerical Variables Found: {len(num_vars)}**")
-                                else:
-                                    st.warning("**⚠️ No numerical variables found.**")
-
-                                if num_vars:
-                                    for i in range(0, len(num_vars), 2):  # Adjust columns as needed
-                                        cols = st.columns(2)
-                                        for j, col_name in enumerate(num_vars[i:i+2]):
-                                            with cols[j]:
-                                                st.markdown(f"**{col_name} over {time_col}**")
-                                                skew_val = df[col_name].skew()
-                                                skew_tag = (
-                                                    "🟩 Symmetric" if abs(skew_val) < 0.5 else
-                                                    "🟧 Moderate skew" if abs(skew_val) < 1 else
-                                                    "🟥 Highly skewed"
-                                                )
-                                                st.info(f"Skewness: {skew_val:.2f} — {skew_tag}")
-
-                                                fig_line, ax_line = plt.subplots(figsize=(7,2.5))
-                                                ax_line.plot(df[time_col], df[col_name], color='teal', linewidth=1.5)
-                                                ax_line.set_title(f"{col_name} over {time_col}", fontsize=10)
-                                                ax_line.set_xlabel(time_col, fontsize=8)
-                                                ax_line.set_ylabel(col_name, fontsize=8)
-                                                ax_line.tick_params(labelsize=8)
-                                                ax_line.grid(True)
-                                                st.pyplot(fig_line, use_container_width=True)
-                                                
-                                        st.markdown('---')
-
-                            with st.container(border=True):
+                st.markdown("##### 🎢 Rolling Statistics")
+                df.sort_index(inplace=True)
+                rolling_mean = df[target_col].rolling(window=12).mean()
+                rolling_std = df[target_col].rolling(window=12).std()
+                                
+                fig3, ax2 = plt.subplots(figsize=(20,3))
+                ax2.plot(df[target_col], label='Original', color='blue')
+                ax2.plot(rolling_mean, label='Rolling Mean', color='orange')
+                ax2.plot(rolling_std, label='Rolling Std Dev', color='green')
+                ax2.set_title(f"Rolling Statistics of {target_col} over Time", fontsize=10)
+                ax2.set_xlabel(time_col)
+                ax2.set_ylabel(target_col)
+                ax2.legend(fontsize=10)
+                ax2.grid(True)
+                st.pyplot(fig3, use_container_width=True)
+                                
+            with st.container(border=True):
 
                                 st.markdown("##### 🧪 Decomposition ")
-                                #decomposition = seasonal_decompose(df1[target_variable], model='additive', period=freq_guess)
-
+                                decomposition = seasonal_decompose(df[target_col], model='additive', period=12)
                                 fig, axs = plt.subplots(4, 1, figsize=(20,10), sharex=True)
                                 axs[0].plot(decomposition.observed, label="Observed")
                                 axs[1].plot(decomposition.trend, label="Trend", color='orange')
                                 axs[2].plot(decomposition.seasonal, label="Seasonality", color='green')
                                 axs[3].plot(decomposition.resid, label="Residuals", color='red')
-
                                 for ax in axs:
                                     ax.legend(loc='upper left')
                                     ax.grid(True)
-
                                 st.pyplot(fig, use_container_width=True)
-
-                            with st.container(border=True):
                                 
-                                st.markdown("##### 🎢 Rolling Statistics")
-                                df2.sort_index(inplace=True)
-                                rolling_mean = df2[target_variable].rolling(window=12).mean()
-                                rolling_std = df2[target_variable].rolling(window=12).std()
-                                
-                                fig3, ax2 = plt.subplots(figsize=(20,3))
-                                ax2.plot(df2[target_variable], label='Original', color='blue')
-                                ax2.plot(rolling_mean, label='Rolling Mean', color='orange')
-                                ax2.plot(rolling_std, label='Rolling Std Dev', color='green')
-                                ax2.set_title(f"Rolling Statistics of {target_variable} over Time", fontsize=10)
-                                ax2.set_xlabel(time_col)
-                                ax2.set_ylabel(target_variable)
-                                ax2.legend()
-                                ax2.grid(True)
-                                st.pyplot(fig3, use_container_width=True)
+    with tabs[2]:
+        
+            with st.container(border=True):
+                
+                st.markdown("##### Transformations ")
+                if st.session_state['transformations']:
+                    for t in st.session_state['transformations']:
+                        st.write(f"✅ {t}")
+                else:
+                    st.write("No transformations applied.")
 
-                        with tabs[2]:  
-                                                  
-                            with st.container(border=True):
-                                
-                                col1, col2 = st.columns((0.2,0.8))
-                                with col1:
-                        
-                                    missing_values = check_missing_values(df)
-                                    if missing_values.empty:
-                                        st.success("**No missing values found!**")
-                                    else:
-                                        st.warning("**Missing values found!**")
-                                        st.write("**Number of missing values:**")
-                                        st.table(missing_values)
+            with st.container(border=True):
+                
+                st.markdown("##### Missing Values ")
+                missing = df[feature_cols].isnull().sum()
+                st.write(missing[missing > 0] if missing.sum() > 0 else "No missing values.")
+                
+    with tabs[3]:
+        
+            with st.container(border=True):
+                
+                st.markdown("##### 🧪 Stationarity Tests ")
+                series = df[target_col].dropna()
 
-                                        with col2:   
-                                                          
-                                            st.write("**Missing Values Treatment:**")                  
-                                            cleaned_df = handle_numerical_missing_values(df, selected_numerical_strategy)
-                                            cleaned_df = handle_categorical_missing_values(cleaned_df, selected_categorical_strategy)   
-                                            st.table(cleaned_df.head(2))
-                                            st.download_button("📥 Download Treated Data (.csv)", cleaned_df.to_csv(index=False), file_name="treated_data.csv")                            
+                # Run ADF test
+                try:
+                    adf_result = adfuller(series)
+                    adf_stat = adf_result[0]
+                    adf_p = adf_result[1]
+                    adf_lags = adf_result[2]
+                    adf_nobs = adf_result[3]
+                    adf_crit = adf_result[4]
+                except Exception as e:
+                    st.error(f"ADF test failed: {e}")
+                    adf_stat = adf_p = np.nan
 
-                            with st.container(border=True):
-                                
-                                df.set_index(time_col, inplace=True)
-                                time_diffs = df.index.to_series().diff().dropna()
-                                most_common_diff = time_diffs.mode()[0]
-                                is_equidistant = (time_diffs == most_common_diff).all()
+                # Run KPSS test
+                try:
+                    kpss_result = kpss(series, regression='c', nlags="auto")
+                    kpss_stat = kpss_result[0]
+                    kpss_p = kpss_result[1]
+                    kpss_lags = kpss_result[2]
+                    kpss_crit = kpss_result[3]
+                except Exception as e:
+                    st.error(f"KPSS test failed: {e}")
+                    kpss_stat = kpss_p = np.nan
 
-                                st.markdown("##### ⏱️ Timestamp Check")
-                                if is_equidistant:
-                                    st.success(f"✅ Timestamps are in **chronological and equidistant** order. Interval: `{most_common_diff}`")
-                                else:
-                                    st.warning(f"⚠️ Timestamps are **not equidistant**. Detected interval mode: `{most_common_diff}`")
+                # Create results DataFrame
+                test_results = pd.DataFrame({
+                    "Test": ["ADF (Augmented Dickey-Fuller)", "KPSS (Kwiatkowski-Phillips-Schmidt-Shin)"],
+                    "Statistic": [f"{adf_stat:.6f}", f"{kpss_stat:.6f}"],
+                    "p-value": [f"{adf_p:.6f}", f"{kpss_p:.6f}"],
+                    "Lags Used": [adf_lags, kpss_lags],
+                    "Number of Obs": [adf_nobs, len(series)],
+                    "Conclusion": [
+                        "✅ Series is stationary — no differencing required." if adf_p < 0.05 else "❗Series is **non-stationary** — differencing required.",
+                        "✅ Series is stationary — no differencing required." if kpss_p > 0.05 else "❗Series is **non-stationary** — differencing required."
+                    ]
+                })
 
-                                    if st.toggle("**🔧 Fix Missing Timestamps (Reindex & Interpolate)?**"):
-
-                                        full_index = pd.date_range(start=df.index.min(), end=df.index.max(), freq=most_common_diff)
-                                        df = df.reindex(full_index)
-                                        num_cols = df.select_dtypes(include='number').columns
-                                        df[num_cols] = df[num_cols].interpolate()
-                                        st.success("✅ Reindexed and interpolated missing timestamps.")
-                                        st.dataframe(df.head(3),use_container_width=True)
-
-                            with st.container(border=True):   
-
-                                    apply_resampling = st.toggle("🔁 **Enable Resampling?**", value=False)
-                                    df_resampled = df.copy()
-
-                                    if apply_resampling:
-                                        resample_type = st.radio("Choose resampling type:", ["Downsampling", "Upsampling"], horizontal=True)
-
-                                        if time_col not in df_resampled.columns:
-                                            df_resampled = df_resampled.reset_index()
-                                        df_resampled[time_col] = pd.to_datetime(df_resampled[time_col])
-                                        df_resampled.set_index(time_col, inplace=True)
-
-                                        if resample_type == "Downsampling":
-                                            df_resampled = getattr(df_resampled.resample(resample_freq_down), agg_method)()
-                                            st.info(f"🔽 Downsampled to `{resample_freq_down}` using `{agg_method}` aggregation.")
-
-                                        elif resample_type == "Upsampling":
-                                            df_resampled = df_resampled.resample(resample_freq_up).asfreq()
-                                            num_cols = df_resampled.select_dtypes(include='number').columns
-                                            df_resampled[num_cols] = df_resampled[num_cols].interpolate(method=interp_method, limit_direction="both")
-                                            st.info(f"🔼 Upsampled to `{resample_freq_up}` using `{interp_method}` interpolation.")
-
-                                        st.dataframe(df_resampled.head(), use_container_width=True)
-
-                                    else:
-                                        st.info("⏸️ Resampling disabled. using original data.")
-
-                                    df = df_resampled.copy()                                                                 
-                            
-                            with st.container(border=True):
-                                
-                                col1, col2= st.columns((0.25,0.75))
-                                with col1:                            
-                                    apply_log = st.checkbox("**Apply log transformation before differencing (if data > 0)**", value=False)
-                                
-                                with col2:                            
-                                    series = df[target_variable].dropna()
-                                    
-                                    if apply_log:
-                                        if (series <= 0).any():
-                                            st.warning("**⚠️ Cannot apply log transformation — series contains non-positive values.**")
-                                            apply_log = False
-                                        else:
-                                            series = np.log(series)
-                                            st.info("**🧮 Log transformation applied before differencing.**")
-                                                                                        
-                        with tabs[3]: 
-                                                   
-                            with st.container(border=True):
-                                
-                                col1, col2= st.columns((0.25,0.75))
-                                with col1:
-                                
-                                    adf_result = adfuller(series)
-                                    adf_stat, adf_pval = adf_result[0], adf_result[1]
-
-                                    kpss_result = kpss(series, regression='c', nlags="auto")
-                                    kpss_stat, kpss_pval = kpss_result[0], kpss_result[1]
-
-                                    st.markdown("##### 🧪 Stationarity Tests ")
-                                    stationarity_df = pd.DataFrame({
-                                        "Test": ["ADF", "KPSS"],
-                                        "Test Statistic": [adf_stat, kpss_stat],
-                                        "p-value": [adf_pval, kpss_pval],
-                                        "Interpretation": [
-                                            "Stationary (p ≤ 0.05)" if adf_pval <= 0.05 else "Non-stationary (p > 0.05)",
-                                            "Non-stationary (p ≤ 0.05)" if kpss_pval <= 0.05 else "Stationary (p > 0.05)"]})
-                                    stationarity_df[["Test Statistic", "p-value"]] = stationarity_df[["Test Statistic", "p-value"]].round(3)
-                                    st.table(stationarity_df.T)
-
-                                    st.divider()
-                                    #----------------------------------------------------------
-                                    if adf_pval > 0.05 or kpss_pval <= 0.05:
-                                        st.warning("❗Series is **non-stationary** — differencing required.")
-                                    else:
-                                        st.success("✅ Series is **stationary** — no differencing required.")
-                                    #----------------------------------------------------------                                    
-                                    needs_diff = adf_pval > 0.05 or kpss_pval <= 0.05
-                                    
-                                    diff_series = series.copy()
-                                    diff_count = 0
-                                    seasonal_diff_applied = False
-                                    max_diff = 3 
-                                    
-                                    decomposition = seasonal_decompose(series, model='additive', period=12)
-                                    seasonality_std = decomposition.seasonal.dropna().std()
-                                    has_seasonality = seasonality_std > 0.2
-
-                                    if has_seasonality:
-                                        diff_series = diff_series.diff(12)
-                                        seasonal_diff_applied = True
-                                        st.warning("🔁 Detected strong seasonality — **seasonal differencing** applied.")
-
-                                    adf_pval, kpss_pval = test_stationarity(diff_series)
-                                    while needs_diff and diff_count < max_diff:
-                                        diff_series = diff_series.diff()
-                                        diff_count += 1
-                                        adf_pval, kpss_pval = test_stationarity(diff_series)
-
-                                    if diff_count == 0 and not seasonal_diff_applied:
-                                        st.success("✅ Series is already **stationary**. No differencing needed.")
-                                    elif seasonal_diff_applied and diff_count == 0:
-                                        st.info("🔁 **Seasonal differencing** applied. Series became stationary.")
-                                    else:
-                                        st.warning(f"🔁 Applied **{diff_count}x differencing**{' with seasonal differencing' if seasonal_diff_applied else ''} to achieve stationarity.")
-
-                                    df['diff'] = diff_series
-                                    df.dropna(subset=['diff'], inplace=True)
-                                    #----------------------------------------------------------
-                                
-                                with col2:
-                                        
-                                        st.markdown("##### 📈 Differenced Series | Visualization")
-                                        fig, ax = plt.subplots(figsize=(20, 4))
-                                        ax.plot(df.index, df['diff'], label='Differenced Series', color='purple')
-                                        #ax.set_title('Differenced Series', fontsize=10)
-                                        ax.set_xlabel('Date')
-                                        ax.set_ylabel('Value')
-                                        ax.legend()
-                                        ax.grid(True)
-                                        st.pyplot(fig, use_container_width=True)
-
-                            with st.container(border=True):
-                                                                    
-                                st.markdown("##### 🔁 Differenced Series(**Showing Top 2 rows for reference.**)")
-                                df_show = df.copy()
-                                if time_col not in df_show.columns:
-                                    df_show = df_show.reset_index()
-                                df_show = df_show[[time_col, target_variable, 'diff']].rename(columns={target_variable: "Original", 'diff': "Differenced"})
-                                st.dataframe(df_show.head(2), hide_index=True)
-
-                            with st.container(border=True):
-
-                                st.markdown("##### 📈 ACF & PCF Plot")
-                                if len(df['diff']) < lags_val:
-                                    st.warning(f"⚠️ Not enough data points to plot with {lags_val} lags. Minimum required: {lags_val}")
-                                else:
-                                    col1, col2 = st.columns(2)
-                                    with col1:                                 
-
-                                        fig_acf, ax_acf = plt.subplots(figsize=(12, 4))
-                                        plot_acf(df['diff'], ax=ax_acf, lags=40, alpha=0.05)
-                                        ax_acf.set_title("Autocorrelation Function (ACF)")
-                                        st.pyplot(fig_acf, use_container_width=True)
-
-                                    with col2:    
-                                        
-                                        fig_pacf, ax_pacf = plt.subplots(figsize=(12, 4))
-                                        plot_pacf(df['diff'], ax=ax_pacf, lags=40, alpha=0.05, method="ywm")
-                                        ax_pacf.set_title("Partial Autocorrelation Function (PACF)")
-                                        st.pyplot(fig_pacf, use_container_width=True)
-
-                                with st.expander("ℹ️ Interpretation Tips",expanded=True):
-                                    st.markdown("""
-                                    - **ACF** helps determine the **MA(q)** term: cut-off or gradual decline.
-                                    - **PACF** helps determine the **AR(p)** term: sharp drop or tapering.
-                                    - Use spikes outside the shaded area to identify lags.
-                                    """)
-  
-                            with st.container(border=True):
-                                
-                                acf_vals = acf(df['diff'], nlags=40)
-                                pacf_vals = pacf(df['diff'], nlags=40, method=pacf_method)
-
-                                q_suggested = first_spike(acf_vals)
-                                p_suggested = first_spike(pacf_vals)
-                                d = diff_count            
+                st.dataframe(test_results,hide_index=True,use_container_width=True)
+                st.divider()
+                col1, col2 = st.columns(2)
+                with col1:
                     
-                        with tabs[4]: 
+                    st.write("**ADF Test (Null: Non-Stationary)**")
+                    if adf_p < 0.05:
+                        st.success("Reject H₀ → ✅ Series is already **stationary**. No differencing needed.")
+                    else:
+                        st.warning("Fail to reject H₀ → ❗Series is **non-stationary** — differencing required.")
+                
+                with col2:
+                    st.write("**KPSS Test (Null: Stationary)**")
+                    if kpss_p > 0.05:
+                        st.success("Fail to reject H₀ → ✅ Series is already **stationary**. No differencing needed.")
+                    else:
+                        st.warning("Reject H₀ → ❗Series is **non-stationary** — differencing required.")
+                        
+            with st.container(border=True):
+                
+                d = 0
+                diff_series = series.copy()
+                max_d = 3
+                while (adf_p >= 0.05 or (kpss_p <= 0.05 and kpss_p != np.nan)) and d < max_d:
+                    diff_series = diff_series.diff().dropna()
+                    try:
+                        adf_p = adfuller(diff_series)[1]
+                    except:
+                        adf_p = 1.0
+                    try:
+                        kpss_p = kpss(diff_series)[1]
+                    except:
+                        kpss_p = 0.0
+                    d += 1
 
-                            X = df.drop(columns=["diff"])
-                            y = df["diff"]
-                            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=random_state)
-                            #y_log = np.log(df["diff"])  # or original column
-                            #y_log_train = y_log.iloc[y_train.index]
+                st.markdown(f"Required differencing order: `d = {d}`")
 
-                            col1, col2= st.columns(2)
-                            with col1:  
-                                with st.container(border=True): 
-                                          
-                                    st.markdown("✅ **Final dataset prepared for modeling**")
-                                    st.info(f"""
-                                    - Train set size: **{X_train.shape[0]} rows**  
-                                    - Test set size: **{X_test.shape[0]} rows**
-                                    """)   
+                fig, ax = plt.subplots(figsize=(20,3))
+                ax.plot(series.index, series, label="Original", alpha=0.7)
+                if d > 0:
+                    ax.plot(diff_series.index, diff_series, label=f"Differenced (d={d})", color='red')
+                ax.legend()
+                ax.set_title("Original vs Differenced Series",fontsize=10)
+                st.pyplot(fig,use_container_width=True)
+                
+            with st.container(border=True):
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    fig, axes = plt.subplots(2,2, figsize=(10,8))
+                    
+                    # Histogram
+                    axes[0,0].hist(diff_series, bins=20, color='skyblue', edgecolor='k')
+                    axes[0,0].set_title("Histogram of Differenced Series")
+                    
+                    # Periodogram (Power Spectral Density)
+                    f, Pxx = periodogram(diff_series)
+                    axes[0,1].semilogy(f, Pxx)
+                    axes[0,1].set_title("Periodogram")
+                    axes[0,1].set_xlabel("Frequency")
+                    axes[0,1].set_ylabel("Power")
+                    
+                    # Q-Q Plot
+                    stats.probplot(diff_series, dist="norm", plot=axes[1,0])
+                    axes[1,0].set_title("Q-Q Plot (Normality)")
+                    
+                    # Clear unused subplot
+                    axes[1,1].axis("off")
+                    plt.tight_layout()
+                    st.pyplot(fig,use_container_width=True)
 
-                            with col2: 
-                                with st.container(border=True):
-                                    
-                                    st.markdown("🤖 **Suggested ARIMA Order (p, d, q)**")
-                                    st.info(f"""
-                                    - **p (AR)** suggested from PACF: `{p_suggested}`
-                                    - **d (Differencing)** based on stationarity tests: `{d}`
-                                    - **q (MA)** suggested from ACF: `{q_suggested}`
-                                    """)  
+                with col2:
+                    fig2, (ax1, ax2) = plt.subplots(2,1, figsize=(8,6))
+                    plot_acf(diff_series, ax=ax1, lags=20)
+                    plot_pacf(diff_series, ax=ax2, lags=20)
+                    plt.tight_layout()
+                    st.pyplot(fig2,use_container_width=True)
+                    
+    with tabs[4]:
+        
+            with st.container(border=True):                    
+                    
+                split_idx = int(len(df) * 0.8)
+                train, test = df[:split_idx], df[split_idx:]
+                y_train, y_test = train[target_col].values, test[target_col].values
+                X_train = np.arange(len(y_train)).reshape(-1, 1)
+                X_test = np.arange(len(y_train), len(y_train) + len(y_test)).reshape(-1, 1)
 
-                            st.divider() 
+                #st.write(f"Train size: {len(train)} | Test size: {len(test)}")
+                col1, col2= st.columns(2)
+                with col1:
+                    st.markdown("##### ✅ **Final dataset | for modeling**")
+                    st.info(f"""
+                        - Train set size: **{train.shape[0]} rows**  
+                        - Test set size: **{test.shape[0]} rows**
+                            """)                  
+
+                with col2:
                             
-                            col1, col2= st.columns(2)
-                            with col1:                                                                          
-                                with st.container(border=True):
-                                                          
-                                    results = []
-                                    predictions = {}
+                    try:
+                        acf_vals = acf(diff_series, nlags=10)
+                        pacf_vals = pacf(diff_series, nlags=10)
+                        p = np.where(pacf_vals[1:] < 0.1)[0][0] if np.any(pacf_vals[1:] < 0.1) else 1
+                        q = np.where(acf_vals[1:] < 0.1)[0][0] if np.any(acf_vals[1:] < 0.1) else 1
+                        st.markdown("##### 🤖 **Suggested ARIMA Order (p, d, q)**")
+                        st.info(f"""
+                                    - **p (AR)** suggested from PACF: `{p}`
+                                    - **d (Differencing)** based on stationarity tests: `{d}`
+                                    - **q (MA)** suggested from ACF: `{q}`
+                                    """)
 
-                                    model_ets = ExponentialSmoothing(y_train, trend='add', seasonal=None, initialization_method='estimated').fit()
-                                    ets_pred = model_ets.forecast(steps=len(y_test))
-                                    metrics = calculate_metrics(y_test, ets_pred)
-                                    results.append(["Exponential Smoothing", *metrics])
-                                    predictions["Exponential Smoothing"] = ets_pred
+                    except:
+                            st.write("Suggested ARIMA order: (1,1,1)")           
+                            
+            col1, col2= st.columns((0.7,0.3))
+            with col1:
+                with st.container(border=True):          
+                
+                        models_pred = {}
+                        errors = []
 
-                                    ma_pred = y_train.rolling(window=2).mean().shift(1).fillna(method='bfill')
-                                    metrics = calculate_metrics(y_train, ma_pred)
-                                    results.append(["Moving Average", *metrics])
-                                    predictions["Moving Average"] = ma_pred.iloc[-len(y_test):]
+                        # Moving Average
+                        window = 5
+                        ma_pred = np.convolve(y_train, np.ones(window)/window, mode='valid')
+                        ma_pred = np.concatenate([ma_pred, [ma_pred[-1]] * len(y_test)])[-len(y_test):]
+                        models_pred["Moving Average"] = ma_pred
+                        errors.append(("Moving Average", *evaluate(ma_pred, y_test)))
 
-                                    model_ar = AutoReg(y_train, lags=1).fit()
-                                    ar_pred = model_ar.predict(start=len(y_train), end=len(y_train)+len(y_test)-1)
-                                    metrics = calculate_metrics(y_test, ar_pred)
-                                    results.append(["Auto Regression", *metrics])
-                                    predictions["Auto Regression"] = ar_pred
+                        # Smoothing
+                        ses = SimpleExpSmoothing(y_train).fit()
+                        ses_pred = ses.forecast(len(y_test))
+                        models_pred["Smoothing (SES)"] = ses_pred
+                        errors.append(("Smoothing (SES)", *evaluate(ses_pred, y_test)))
 
-                                    model_arima = ARIMA(y_train, order=(2, 1, 2)).fit()
-                                    arima_pred = model_arima.forecast(steps=len(y_test))
-                                    metrics = calculate_metrics(y_test, arima_pred)
-                                    results.append(["ARIMA", *metrics])
-                                    predictions["ARIMA"] = arima_pred
+                        # Auto Regression
+                        ar = AutoReg(y_train, lags=2).fit()
+                        ar_pred = ar.forecast(steps=len(y_test))
+                        models_pred["Auto Regression"] = ar_pred
+                        errors.append(("Auto Regression", *evaluate(ar_pred, y_test)))
 
-                                    #model_sarimax = SARIMAX(y_train, exog=X_train, order=(1, 1, 1)).fit(disp=False)
-                                    #sarimax_pred = model_sarimax.predict(start=X_test.index[0], end=X_test.index[-1], exog=X_test)
-                                    #metrics = calculate_metrics(y_test, sarimax_pred)
-                                    #results.append(["SARIMAX", *metrics])
-                                    #predictions["SARIMAX"] = sarimax_pred
+                        # ARIMA
+                        arima_order = (p, d, q) if 'p' in locals() else (1, d, 1)
+                        arima = ARIMA(y_train, order=arima_order).fit()
+                        arima_pred = arima.forecast(steps=len(y_test))
+                        models_pred["ARIMA"] = arima_pred
+                        errors.append(("ARIMA", *evaluate(arima_pred, y_test)))
 
-                                    model_xgb = XGBRegressor()
-                                    model_xgb.fit(X_train, y_train)
-                                    xgb_pred = model_xgb.predict(X_test)
-                                    metrics = calculate_metrics(y_test, xgb_pred)
-                                    results.append(["XGBoost", *metrics])
-                                    predictions["XGBoost"] = xgb_pred
+                        # Random Forest
+                        rf = RandomForestRegressor(n_estimators=n_estimators, max_depth=10)
+                        rf.fit(X_train, y_train)
+                        rf_pred = rf.predict(X_test)
+                        models_pred["Random Forest"] = rf_pred
+                        errors.append(("Random Forest", *evaluate(rf_pred, y_test)))
 
-                                    st.markdown("##### ⚖️ Comparison |  Error Metrics")
-                                    metrics_df = pd.DataFrame(results, columns=["Model", "MAE", "MSE", "RMSE", "R2", "MAPE"]).round(3)
-                                    st.dataframe(metrics_df,hide_index=True) 
+                        # XGBoost
+                        xgb = XGBRegressor(n_estimators=n_estimators, max_depth=10)
+                        xgb.fit(X_train, y_train)
+                        xgb_pred = xgb.predict(X_test)
+                        models_pred["XGBoost"] = xgb_pred
+                        errors.append(("XGBoost", *evaluate(xgb_pred, y_test)))
 
-                            with col2:                                                                          
-                                with st.container(border=True):
-                                                                 
-                                    metric_directions = {"MAE": True,  "MSE": True,"RMSE": True,"MAPE": True,"R2": True}
-                                    best_models_summary = []
-                                    for metric, ascending in metric_directions.items():
-                                        best_model = metrics_df.sort_values(by=metric, ascending=ascending).iloc[0]
-                                        best_models_summary.append({"Metric": metric,"Best Model": best_model["Model"],"Score": best_model[metric]})
-                                    best_models_df = pd.DataFrame(best_models_summary)
-                                    st.markdown("##### 🏆 Best Models by Error Metric")
-                                    st.dataframe(best_models_df, hide_index=True, use_container_width=True)
+                        # Prophet
+                        try:
+                            prophet_df = df[[time_col, target_col]].rename(columns={time_col: 'ds', target_col: 'y'})
+                            m = Prophet(changepoint_prior_scale=changepoint_prior,
+                                            seasonality_prior_scale=seasonality_prior,
+                                            seasonality_mode=seasonality_mode)
+                            m.fit(prophet_df[:split_idx])
+                            future = m.make_future_dataframe(periods=len(y_test))
+                            forecast = m.predict(future)
+                            prophet_pred = forecast.iloc[-len(y_test):]['yhat'].values
+                            models_pred["Prophet"] = prophet_pred
+                            errors.append(("Prophet", *evaluate(prophet_pred, y_test)))
+                        except:
+                            st.warning("Prophet failed.")
 
-                            with st.container(border=True):     
-                                
-                                    ranked_df = metrics_df.copy()
-                                    for metric in ["MAE", "MSE", "RMSE", "MAPE"]:
-                                        ranked_df[f"{metric}_Rank"] = ranked_df[metric].rank(method='min', ascending=True)
-                                    ranked_df["Rank"] = ranked_df["RMSE"].rank(method='min', ascending=False)
-                                    rank_cols = [col for col in ranked_df.columns if col.endswith("_Rank")]
-                                    ranked_df["Average_Rank"] = ranked_df[rank_cols].mean(axis=1)
-                                    best_overall_model_row = ranked_df.sort_values(by="Average_Rank").iloc[0]
-                                    best_model_name = best_overall_model_row["Model"]
+                        error_df = pd.DataFrame(errors, columns=["Model", "MAE", "MSE", "RMSE", "MAPE (%)", "R²"])
+                        best_models = {}
+                        metrics = ["MAE", "MSE", "RMSE", "MAPE (%)"]
+                        for metric in metrics:
+                            best_models[metric] = error_df.loc[error_df[metric].idxmin(), "Model"]
+                        best_models["R²"] = error_df.loc[error_df["R²"].idxmax(), "Model"]  # Higher is better
+                        best_row = pd.DataFrame([[
+                            "✅ Best Model",best_models["MAE"],best_models["MSE"],best_models["RMSE"],best_models["MAPE (%)"],best_models["R²"]]], columns=error_df.columns)
 
-                                    st.success(f"**🏅 Best Model: {best_model_name}**")
-                                
-                        with tabs[5]:
+                        error_df_styled = pd.concat([error_df, best_row], ignore_index=True)
+                        def highlight_best_row(row):
+                            return ['background-color: #d4edda; color: #155724; font-weight: bold' if row.name == len(error_df) else '' for _ in row]
+                        error_df_styled = error_df_styled.style.apply(highlight_best_row, axis=1)
 
-                            with st.container(border=True):
+                        st.markdown("##### 📊 **Model Performance Comparison**")
+                        st.dataframe(error_df_styled, hide_index=True, use_container_width=True)
+                        
+                        st.session_state.models_pred = models_pred  # ✅ Assign after computation
+                        st.session_state.y_test = y_test
+                        st.session_state.test_dates = test[time_col].values
 
-                                best_forecast = predictions[best_model_name]
-                                plt.figure(figsize=(12, 4))
-                                plt.plot(y_test.index, y_test.values, label='Actual', color='black')
-                                plt.plot(y_test.index, best_forecast, label='Forecast', color='blue')
-                                plt.title(f'{best_model_name} — Actual vs Forecast')
-                                plt.xlabel("Time")
-                                plt.ylabel("Value")
-                                plt.legend()
-                                st.pyplot(plt)
+            with col2:
+                with st.container(border=True):  
+                         
+                        st.markdown("##### 🏆 Best Model Summary")
+                        best_summary_data = []
+                        metrics = ["MAE", "MSE", "RMSE", "MAPE (%)", "R²"]
+                        for metric in metrics:
+                            direction = "Minimize" if metric != "R²" else "Maximize"
+                            best_model = best_models[metric]
+                            best_summary_data.append({"Metric": metric,"Best Model": best_model,"Objective": direction})
+                        best_summary_df = pd.DataFrame(best_summary_data)
+                        styled_summary = best_summary_df.style.applymap(color_objective, subset=["Objective"]) \
+                                                    .set_properties(**{'text-align': 'center'}) \
+                                                    .set_table_styles([
+                                                        {"selector": "th", "props": [("text-align", "center"), ("font-weight", "bold")]}
+                                                    ])
+                        st.dataframe(styled_summary, use_container_width=True)
 
-                                residuals = y_test - best_forecast
-                                fig, ax = plt.subplots(1, 2, figsize=(12, 4))
-                                sns.histplot(residuals, kde=True, ax=ax[0])
-                                ax[0].set_title("Residual Distribution")
-                                sns.scatterplot(x=y_test, y=residuals, ax=ax[1])
-                                ax[1].set_title("Residuals vs Actual")
-                                ax[1].axhline(0, linestyle='--', color='red')
-                                st.pyplot(fig)
-                                
-                                                                                           
-                        with tabs[8]:    
+    with tabs[5]:
         
-                                with st.container(border=True):
-                                    
-                                    st.divider()
-                                
-         
+            if st.session_state.models_pred is None:
+                    st.warning("No models found. Run forecasting first.")
+                    st.stop()
+
+            y_test = st.session_state.y_test
+            test_dates = st.session_state.test_dates
+
+            for name, pred in st.session_state.models_pred.items():
+                with st.container(border=True):
+
+                    st.write(f"Shapes: {name} - Test: {y_test.shape}, Predicted: {pred.shape}")
+                    if len(y_test) != len(pred):
+                        st.error(f"Mismatched lengths: Test ({len(y_test)}) ≠ Predicted ({len(pred)})")
+                        continue
+                    if len(test_dates) != len(pred):
+                        st.error(f"Mismatched lengths: Dates ({len(test_dates)}) ≠ Predicted ({len(pred)})")
+                        continue
+
+                    fig, ax = plt.subplots(figsize=(30,5))
+                    ax.plot(test_dates, y_test, label="Actual", color='blue')
+                    ax.plot(test_dates, pred, label="Predicted", color='red', linestyle='--')
+                    ax.set_title(f"{name}: Actual vs Predicted")
+                    ax.legend()
+                    ax.set_xlabel(time_col)
+                    ax.set_ylabel(target_col)
+                    st.pyplot(fig,use_container_width=True)
+                    
+    with tabs[6]:                    
+                    
+            y_full = df[target_col].values
+            last_date = df[time_col].iloc[-1]
+            future_dates = pd.date_range(last_date + pd.Timedelta(days=1), periods=forecast_steps, freq='D')
+
+            all_forecasts = pd.DataFrame({"Date": future_dates})
+            X_full = np.arange(len(y_full)).reshape(-1, 1)
+            X_future = np.arange(len(y_full), len(y_full) + forecast_steps).reshape(-1, 1)
+
+            for name in st.session_state['models_pred'].keys():
+                preds = []
+                
+                if name == "Moving Average":
+                    last_avg = np.mean(y_full[-5:])
+                    preds = [last_avg] * forecast_steps
+                    
+                elif name == "Smoothing (SES)":
+                    model = SimpleExpSmoothing(y_full).fit()
+                    preds = model.forecast(forecast_steps)
+                    
+                elif name == "Auto Regression":
+                    model = AutoReg(y_full, lags=2).fit()
+                    preds = model.forecast(steps=forecast_steps)
+                    
+                elif name == "ARIMA":
+                    model = ARIMA(y_full, order=(1, 1, 1)).fit()
+                    preds = model.forecast(steps=forecast_steps)
+                    
+                elif name == "Random Forest":
+                    rf = RandomForestRegressor(n_estimators=n_estimators, max_depth=max_depth)
+                    rf.fit(X_full, y_full)
+                    preds = rf.predict(X_future)
+                    
+                elif name == "XGBoost":
+                    xgb = XGBRegressor(n_estimators=n_estimators, max_depth=max_depth)
+                    xgb.fit(X_full, y_full)
+                    preds = xgb.predict(X_future)
+                    
+                elif name == "Prophet":
+                    try:
+                        m = Prophet(changepoint_prior_scale=changepoint_prior,
+                                        seasonality_prior_scale=seasonality_prior,
+                                        seasonality_mode=seasonality_mode)
+                        prophet_df = df[[time_col, target_col]].rename(columns={time_col: 'ds', target_col: 'y'})
+                        m.fit(prophet_df)
+                        future = m.make_future_dataframe(periods=forecast_steps)
+                        forecast = m.predict(future)
+                        preds = forecast.iloc[-forecast_steps:]['yhat'].values
+                    except:
+                        preds = [np.nan] * forecast_steps
+
+                all_forecasts[name] = preds
+            st.dataframe(all_forecasts)
+
+            for col in all_forecasts.columns[1:]:
+                with st.container(border=True):
+                    fig, ax = plt.subplots(figsize=(30,5))
+                    ax.plot(df[time_col], y_full, label="Historical", color="black")
+                    ax.plot(future_dates, all_forecasts[col], label=f"{col} Forecast", color="orange")
+
+                    # Enhance visibility of the forecast area
+                    ax.axvspan(df[time_col].iloc[-1], future_dates[-1], alpha=0.1, color='gray')  # Shade forecast period
+                    ax.set_xlim(df[time_col].iloc[-len(df)//2], future_dates[-1])  # Zoom into recent history + forecast
+                    ax.set_title(f"{col} Forecast")
+                    ax.legend()
+                    ax.set_xlabel(time_col)
+                    ax.set_ylabel(target_col)
+                    st.pyplot(fig, use_container_width=True)
         
-        
-        
-        
-        
-        
-        
-        else:
-            st.warning("Please upload a file for analysis.") 
-                 
+                            
+if st.sidebar.button("Reset All"):
+    for key in st.session_state.keys():
+        del st.session_state[key]
+    st.experimental_rerun()
