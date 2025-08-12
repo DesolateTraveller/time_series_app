@@ -8,3 +8,5 @@ xgboost
 pmdarima
 scipy
 seaborn
+plotly
+prophet
