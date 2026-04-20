@@ -46,9 +46,9 @@ from tensorflow.keras.optimizers import Adam
 import warnings
 warnings.filterwarnings("ignore")
 #----------------------------------------
-from ts_func import load_file
-from ts_func import check_missing_values, handle_numerical_missing_values, handle_categorical_missing_values
-from ts_func import evaluate, color_objective
+from tsf_func import load_file
+from tsf_func import check_missing_values, handle_numerical_missing_values, handle_categorical_missing_values
+from tsf_func import evaluate, color_objective
 
 from ts2_func import (load_file, check_missing_values,run_stationarity_tests, get_decomposition_insights, evaluate, color_objective)
 #---------------------------------------------------------------------------------------------------------------------------------
