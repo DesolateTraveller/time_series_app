@@ -46,6 +46,18 @@ from prophet import Prophet
 ### Functions & Definitions
 #---------------------------------------------------------------------------------------------------------------------------------
 
+def evaluate(pred, true):
+    mae = mean_absolute_error(true, pred)
+    mse = mean_squared_error(true, pred)
+    rmse = np.sqrt(mse)
+    mape = np.mean(np.abs((true - pred) / (true + 1e-8))) * 100
+    r2 = r2_score(true, pred)
+    return mae, mse, rmse, mape, r2
+
+def color_objective(val):
+    color = "#d1ecf1" if val == "Maximize" else "#f8d7da"
+    return f"background-color: {color}; color: #004c6d;" if val == "Maximize" else f"background-color: {color}; color: #721c24;"
+
 @st.cache_data(ttl="2h")
 def load_file(file):
     file_extension = file.name.split('.')[-1]
@@ -105,9 +117,24 @@ def first_spike(values, threshold=0.2):
 
 @st.cache_data(ttl="2h")
 def handle_numerical_missing_values(data, numerical_strategy):
-    imputer = SimpleImputer(strategy=numerical_strategy)
+    data = data.copy()  
     numerical_features = data.select_dtypes(include=['number']).columns
-    data[numerical_features] = imputer.fit_transform(data[numerical_features])
+    if len(numerical_features) == 0:
+        return data
+    if numerical_strategy == 'forward fill (ffill)':
+        data[numerical_features] = data[numerical_features].fillna(method='ffill')
+    elif numerical_strategy == 'backward fill (bfill)':
+        data[numerical_features] = data[numerical_features].fillna(method='bfill')
+    elif numerical_strategy == 'interpolate':
+        #data[numerical_features] = data[numerical_features].interpolate(method='linear', limit_direction='both')
+        if isinstance(data.index, pd.DatetimeIndex):
+            data[numerical_features] = data[numerical_features].interpolate(method='time')
+        else:
+            data[numerical_features] = data[numerical_features].interpolate(method='linear')
+    else:
+        strategy_map = {'mean': 'mean','median': 'median','most_frequent': 'most_frequent'}
+        imputer = SimpleImputer(strategy=strategy_map[numerical_strategy])
+        data[numerical_features] = imputer.fit_transform(data[numerical_features])
     return data
 
 @st.cache_data(ttl="2h")
